@@ -50,7 +50,7 @@ options, args = parser.parse_args()
 if os.geteuid() != 0:
     print(color("[!] Responder must be run as root."))
     sys.exit(-1)
-elif options.OURIP is None and IsOsX() == True:
+elif options.OURIP is None and IsOsX():
     print("\n\033[1m\033[31mOSX detected, -i mandatory option is missing\033[0m\n")
     parser.print_help()
     exit(-1)
@@ -101,7 +101,7 @@ class ThreadingUDPMDNSServer(ThreadingMixIn, UDPServer):
         MADDR6 = 'ff02::fb'
         self.socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR, 1)
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
-        Join = self.socket.setsockopt(socket.IPPROTO_IP,socket.IP_ADD_MEMBERSHIP, socket.inet_aton(MADDR) + settings.Config.IP_aton)
+        self.socket.setsockopt(socket.IPPROTO_IP,socket.IP_ADD_MEMBERSHIP, socket.inet_aton(MADDR) + settings.Config.IP_aton)
 
         #IPV6:
         mreq = socket.inet_pton(socket.AF_INET6, MADDR6) + struct.pack('@I', if_nametoindex2(settings.Config.Interface))
@@ -119,7 +119,7 @@ class ThreadingUDPLLMNRServer(ThreadingMixIn, UDPServer):
         MADDR6 = 'FF02:0:0:0:0:0:1:3'
         self.socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
-        Join = self.socket.setsockopt(socket.IPPROTO_IP,socket.IP_ADD_MEMBERSHIP,socket.inet_aton(MADDR) + settings.Config.IP_aton)
+        self.socket.setsockopt(socket.IPPROTO_IP,socket.IP_ADD_MEMBERSHIP,socket.inet_aton(MADDR) + settings.Config.IP_aton)
 
         #IPV6:
         mreq = socket.inet_pton(socket.AF_INET6, MADDR6) + struct.pack('@I', if_nametoindex2(settings.Config.Interface))
@@ -149,45 +149,45 @@ ThreadingTCPServerAuth.address_family = socket.AF_INET6
 
 def serve_thread_udp_broadcast(host, port, handler):
     try:
-        server = ThreadingUDPServer(('', port), handler)
+        server = ThreadingUDPServer((host, port), handler)
         server.serve_forever()
     except Exception:
         print(color("[!] ", 1, 1) + "Error starting UDP server on port " + str(port) + ", check permissions or other servers running.")
 
 def serve_NBTNS_poisoner(host, port, handler):
-    serve_thread_udp_broadcast('', port, handler)
+    serve_thread_udp_broadcast(host, port, handler)
 
 def serve_MDNS_poisoner(host, port, handler):
     try:
-        server = ThreadingUDPMDNSServer(('', port), handler)
+        server = ThreadingUDPMDNSServer((host, port), handler)
         server.serve_forever()
     except Exception:
         print(color("[!] ", 1, 1) + "Error starting UDP server on port " + str(port) + ", check permissions or other servers running.")
 
 def serve_LLMNR_poisoner(host, port, handler):
     try:
-        server = ThreadingUDPLLMNRServer(('', port), handler)
+        server = ThreadingUDPLLMNRServer((host, port), handler)
         server.serve_forever()
     except Exception:
         print(color("[!] ", 1, 1) + "Error starting UDP server on port " + str(port) + ", check permissions or other servers running.")
         
 def serve_thread_udp(host, port, handler):
     try:
-        server = ThreadingUDPServer(('', port), handler)
+        server = ThreadingUDPServer((host, port), handler)
         server.serve_forever()
     except Exception:
         print(color("[!] ", 1, 1) + "Error starting UDP server on port " + str(port) + ", check permissions or other servers running.")
 
 def serve_thread_tcp(host, port, handler):
     try:
-        server = ThreadingTCPServer(('', port), handler)
+        server = ThreadingTCPServer((host, port), handler)
         server.serve_forever()
     except Exception:
         print(color("[!] ", 1, 1) + "Error starting TCP server on port " + str(port) + ", check permissions or other servers running.")
 
 def serve_thread_tcp_auth(host, port, handler):
     try:
-        server = ThreadingTCPServerAuth(('', port), handler)
+        server = ThreadingTCPServerAuth((host, port), handler)
         server.serve_forever()
     except Exception:
         print(color("[!] ", 1, 1) + "Error starting TCP server on port " + str(port) + ", check permissions or other servers running.")
@@ -199,9 +199,9 @@ def serve_thread_SSL(host, port, handler):
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(cert, key)
         if OsInterfaceIsSupported():
-            server = ThreadingTCPServer(('', port), handler)
+            server = ThreadingTCPServer((host, port), handler)
         else:
-            server = ThreadingTCPServer(('', port), handler)
+            server = ThreadingTCPServer((host, port), handler)
         server.socket = context.wrap_socket(server.socket, server_side=True)
         server.serve_forever()
     except Exception:
@@ -296,8 +296,8 @@ def main():
             threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 3141, HTTP_Proxy,)))
 
         if settings.Config.ProxyAuth_On_Off:
-                from servers.Proxy_Auth import Proxy_Auth
-                threads.append(Thread(target=serve_thread_tcp_auth, args=(settings.Config.Bind_To, 3128, Proxy_Auth,)))
+            from servers.Proxy_Auth import Proxy_Auth
+            threads.append(Thread(target=serve_thread_tcp_auth, args=(settings.Config.Bind_To, 3128, Proxy_Auth,)))
 
         if settings.Config.SMB_On_Off:
             if settings.Config.LM_On_Off:
