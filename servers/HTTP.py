@@ -86,16 +86,6 @@ def GrabCookie(data, host):
 		return Cookie
 	return False
 
-def GrabHost(data, host):
-	Host = re.search(r'(Host:*.\=*)[^\r\n]*', data)
-
-	if Host:
-		Host = Host.group(0).replace('Host: ', '')
-		if settings.Config.Verbose:
-			print(text("[HTTP] Host             : %s " % color(Host, 3)))
-		return Host
-	return False
-
 def GrabReferer(data, host):
 	Referer = re.search(r'(Referer:*.\=*)[^\r\n]*', data)
 
@@ -196,8 +186,7 @@ def PacketSequence(data, client, Challenge):
 		Packet_NTLM = b64decode(''.join(NTLM_Auth))[8:9]
 		if Packet_NTLM == b'\x01':
 			GrabURL(data, client)
-			GrabReferer(data, client)
-			GrabHost(data, client)
+			#GrabReferer(data, client)
 			GrabCookie(data, client)
 
 			Buffer = NTLM_Challenge(ServerChallenge=NetworkRecvBufferPython2or3(Challenge))
@@ -216,7 +205,7 @@ def PacketSequence(data, client, Challenge):
 			ParseHTTPHash(NTLM_Auth, Challenge, client, module)
 
 			if settings.Config.Force_WPAD_Auth and WPAD_Custom:
-				print(text("[HTTP] WPAD (auth) file sent to %s" % client))
+				print(text("[HTTP] WPAD (auth) file sent to %s" % client.replace("::ffff:","")))
 
 				return WPAD_Custom
 			else:
@@ -228,8 +217,7 @@ def PacketSequence(data, client, Challenge):
 		ClearText_Auth = b64decode(''.join(Basic_Auth))
 
 		GrabURL(data, client)
-		GrabReferer(data, client)
-		GrabHost(data, client)
+		#GrabReferer(data, client)
 		GrabCookie(data, client)
 
 		SaveToDb({
@@ -242,7 +230,7 @@ def PacketSequence(data, client, Challenge):
 
 		if settings.Config.Force_WPAD_Auth and WPAD_Custom:
 			if settings.Config.Verbose:
-				print(text("[HTTP] WPAD (auth) file sent to %s" % client))
+				print(text("[HTTP] WPAD (auth) file sent to %s" % client.replace("::ffff:","")))
 
 			return WPAD_Custom
 		else:
@@ -253,12 +241,12 @@ def PacketSequence(data, client, Challenge):
 		if settings.Config.Basic:
 			Response = IIS_Basic_401_Ans()
 			if settings.Config.Verbose:
-				print(text("[HTTP] Sending BASIC authentication request to %s" % client))
+				print(text("[HTTP] Sending BASIC authentication request to %s" % client.replace("::ffff:","")))
 
 		else:
 			Response = IIS_Auth_401_Ans()
 			if settings.Config.Verbose:
-				print(text("[HTTP] Sending NTLM authentication request to %s" % client))
+				print(text("[HTTP] Sending NTLM authentication request to %s" % client.replace("::ffff:","")))
 
 		return Response
 
@@ -302,7 +290,7 @@ class HTTP(BaseRequestHandler):
 					self.request.send(NetworkSendBufferPython2or3(Buffer))
 					self.request.close()
 					if settings.Config.Verbose:
-						print(text("[HTTP] WPAD (no auth) file sent to %s" % self.client_address[0]))
+						print(text("[HTTP] WPAD (no auth) file sent to %s" % self.client_address[0].replace("::ffff:","")))
 
 				else:
 					Buffer = PacketSequence(data,self.client_address[0], Challenge)
@@ -311,3 +299,4 @@ class HTTP(BaseRequestHandler):
 		except:
 			pass
 			
+
