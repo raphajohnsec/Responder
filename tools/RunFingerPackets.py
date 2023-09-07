@@ -9,10 +9,10 @@ def StructWithLenPython2or3(endian,data):
 
 
 def NetworkSendBufferPython2or3(data):
-	return bytes(str(data), 'latin-1')
+    return bytes(str(data), 'latin-1')
 
 def NetworkRecvBufferPython2or3(data):
-	return str(data.decode('latin-1'))
+    return str(data.decode('latin-1'))
 
 class Packet():
     fields = OrderedDict([

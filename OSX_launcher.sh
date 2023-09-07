@@ -12,17 +12,17 @@ SVC_LIST=()
 # looping over everything rather than doing a mass kill because some processes may be 
 # children and may not need to be killed
 for port in ${PORT_LIST[@]}; do
-	PROC=$(lsof +c 0 -i $port | grep -m 1 -v 'launchd\|COMMAND' | cut -d' ' -f1)
-	if [ -n "$PROC" ]; then
+    PROC=$(lsof +c 0 -i $port | grep -m 1 -v 'launchd\|COMMAND' | cut -d' ' -f1)
+    if [ -n "$PROC" ]; then
         AGENT=$(sudo launchctl list | grep -m 1 $PROC | cut -f3 | sed 's/.reloaded//g')
 
         # load/unload are listed as "legacy" in 10.10+ may need to change this someday
-		echo "Stopping $PROC"
+        echo "Stopping $PROC"
         sudo launchctl unload -w /System/Library/LaunchDaemons/$AGENT.plist
 
         # append killed service to new array
         SVC_LIST+=($AGENT)
-	fi
+    fi
 done
 
 # get IP address
@@ -33,7 +33,7 @@ python $1 $3 -i $IP
 
 # restore stopped services
 for agent in ${SVC_LIST[@]}; do
-	echo "Starting $agent"
-		sudo launchctl load -w /System/Library/LaunchDaemons/$agent.plist
+    echo "Starting $agent"
+        sudo launchctl load -w /System/Library/LaunchDaemons/$agent.plist
 
 done

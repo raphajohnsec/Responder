@@ -99,15 +99,15 @@ def GenCheckSum(data):
     return StructWithLenPython2or3("<H",~s & 0xffff)
 
 class Packet():
-	fields = OrderedDict([
-		("data", ""),
-	])
-	def __init__(self, **kw):
-	   self.fields = OrderedDict(self.__class__.fields)
-	   for k,v in kw.items():
-	      self.fields[k] = v(self.fields[k]) if callable(v) else v
-	def __str__(self):
-		return "".join(map(str, self.fields.values()))
+    fields = OrderedDict([
+        ("data", ""),
+    ])
+    def __init__(self, **kw):
+       self.fields = OrderedDict(self.__class__.fields)
+       for k,v in kw.items():
+          self.fields[k] = v(self.fields[k]) if callable(v) else v
+    def __str__(self):
+        return "".join(map(str, self.fields.values()))
 
 #####################################################################
 #ARP Packets

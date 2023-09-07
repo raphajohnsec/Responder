@@ -46,15 +46,15 @@ def NetworkRecvBufferPython2or3(data):
     return str(data.decode('latin-1'))
 
 class Packet():
-	fields = OrderedDict([
-		("data", ""),
-	])
-	def __init__(self, **kw):
-	   self.fields = OrderedDict(self.__class__.fields)
-	   for k,v in kw.items():
-	      self.fields[k] = v(self.fields[k]) if callable(v) else v
-	def __str__(self):
-		return "".join(map(str, self.fields.values()))
+    fields = OrderedDict([
+        ("data", ""),
+    ])
+    def __init__(self, **kw):
+       self.fields = OrderedDict(self.__class__.fields)
+       for k,v in kw.items():
+          self.fields[k] = v(self.fields[k]) if callable(v) else v
+    def __str__(self):
+        return "".join(map(str, self.fields.values()))
 
 config = configparser.ConfigParser()
 config.read(os.path.join(BASEDIR,'Responder.conf'))
@@ -78,7 +78,7 @@ def GetMacAddress(Interface):
    except Exception:
       mac = "00:00:00:00:00:00"
       return binascii.unhexlify(mac.replace(':', '')).decode('latin-1')
-		
+        
 ##### IP Header #####
 class IPHead(Packet):
     fields = OrderedDict([
@@ -299,19 +299,19 @@ def ParseDHCPCode(data, ClientIP,DHCP_DNS):
             return f'Acknowledged DHCP Discover for IP: {CurrentIP}, Req IP: {IPConv}, MAC: {MacAddrStr}'
 
 def SendDiscover():
-	s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
-	s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-	IP_Header = IPHead(SrcIP = socket.inet_aton('0.0.0.0').decode('latin-1'), DstIP=socket.inet_aton('255.255.255.255').decode('latin-1'))
-	Packet = DHCPDiscover()
-	Packet.calculate()
-	Buffer = UDP(SrcPort="\x00\x44", DstPort="\x00\x43",Data = Packet)
-	Buffer.calculate()
-	s.sendto(NetworkSendBufferPython2or3(str(IP_Header)+str(Buffer)), ('255.255.255.255', 67))
+    s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    IP_Header = IPHead(SrcIP = socket.inet_aton('0.0.0.0').decode('latin-1'), DstIP=socket.inet_aton('255.255.255.255').decode('latin-1'))
+    Packet = DHCPDiscover()
+    Packet.calculate()
+    Buffer = UDP(SrcPort="\x00\x44", DstPort="\x00\x43",Data = Packet)
+    Buffer.calculate()
+    s.sendto(NetworkSendBufferPython2or3(str(IP_Header)+str(Buffer)), ('255.255.255.255', 67))
 
 def SendDHCP(packet,Host):
-	s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
-	s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-	s.sendto(NetworkSendBufferPython2or3(packet), Host)
+    s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    s.sendto(NetworkSendBufferPython2or3(packet), Host)
 
 def DHCP(DHCP_DNS):
    s = socket.socket(socket.PF_PACKET, socket.SOCK_RAW)

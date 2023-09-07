@@ -18,20 +18,20 @@ import sqlite3
 import os
 
 def color(txt, code = 1, modifier = 0):
-	if txt.startswith('[*]'):
-		settings.Config.PoisonersLogger.warning(txt)
-	elif 'Analyze' in txt:
-		settings.Config.AnalyzeLogger.warning(txt)
+    if txt.startswith('[*]'):
+        settings.Config.PoisonersLogger.warning(txt)
+    elif 'Analyze' in txt:
+        settings.Config.AnalyzeLogger.warning(txt)
 
-	if os.name == 'nt':  # No colors for windows...
-		return txt
-	return "\033[%d;3%dm%s\033[0m" % (modifier, code, txt)
+    if os.name == 'nt':  # No colors for windows...
+        return txt
+    return "\033[%d;3%dm%s\033[0m" % (modifier, code, txt)
 
 def DbConnect():
-	return sqlite3.connect("./Responder.db")
+    return sqlite3.connect("./Responder.db")
 
 def FingerDbConnect():
-	return sqlite3.connect("./tools/RunFinger.db")
+    return sqlite3.connect("./tools/RunFinger.db")
     
 def GetResponderData(cursor):
      res = cursor.execute("SELECT * FROM Responder")
@@ -60,10 +60,10 @@ def GetResponderCompleteHash(cursor):
          print('{0}'.format(row[0]))
 
 def GetUniqueLookupsIP(cursor):
-	res = cursor.execute("SELECT Poisoner, SentToIp FROM Poisoned WHERE Poisoner in (SELECT DISTINCT UPPER(Poisoner) FROM Poisoned)")
-	for row in res.fetchall():
-		if 'fe80::' not in row[1]:
-			print('Protocol: {0}, IP: {1}'.format(row[0], row[1]))
+    res = cursor.execute("SELECT Poisoner, SentToIp FROM Poisoned WHERE Poisoner in (SELECT DISTINCT UPPER(Poisoner) FROM Poisoned)")
+    for row in res.fetchall():
+        if 'fe80::' not in row[1]:
+            print('Protocol: {0}, IP: {1}'.format(row[0], row[1]))
 
 def GetUniqueLookups(cursor):
      res = cursor.execute("SELECT * FROM Poisoned WHERE ForName in (SELECT DISTINCT UPPER(ForName) FROM Poisoned) ORDER BY SentToIp, Poisoner")
@@ -76,11 +76,11 @@ def GetUniqueDHCP(cursor):
          print('MAC: {0}, IP: {1}, RequestedIP: {2}'.format(row[1], row[2], row[3]))
 
 def GetRunFinger(cursor):
-	res = cursor.execute("SELECT * FROM RunFinger WHERE Host in (SELECT DISTINCT Host FROM RunFinger)")
-	for row in res.fetchall():
-		print(
-			f"{row[1]},['{row[2]}', Os:'{row[3]}', Build:'{row[4]}', Domain:'{row[5]}', Bootime:'{row[6]}', Signing:'{row[7]}', Null Session: '{row[8]}', RDP:'{row[9]}', SMB1:'{row[10]}', MSSQL:'{row[11]}']"
-		)
+    res = cursor.execute("SELECT * FROM RunFinger WHERE Host in (SELECT DISTINCT Host FROM RunFinger)")
+    for row in res.fetchall():
+        print(
+            f"{row[1]},['{row[2]}', Os:'{row[3]}', Build:'{row[4]}', Domain:'{row[5]}', Bootime:'{row[6]}', Signing:'{row[7]}', Null Session: '{row[8]}', RDP:'{row[9]}', SMB1:'{row[10]}', MSSQL:'{row[11]}']"
+        )
 
 def GetStatisticUniqueLookups(cursor):
      res = cursor.execute("SELECT COUNT(*) FROM Poisoned WHERE ForName in (SELECT DISTINCT UPPER(ForName) FROM Poisoned)")
@@ -90,15 +90,15 @@ def GetStatisticUniqueLookups(cursor):
 
 def SavePoisonersToDb(result):
 
-	for k in [ 'Poisoner', 'SentToIp', 'ForName', 'AnalyzeMode']:
-		if k not in result:
-			result[k] = ''
+    for k in [ 'Poisoner', 'SentToIp', 'ForName', 'AnalyzeMode']:
+        if k not in result:
+            result[k] = ''
 
 def SaveToDb(result):
 
-	for k in [ 'module', 'type', 'client', 'hostname', 'user', 'cleartext', 'hash', 'fullhash' ]:
-		if k not in result:
-			result[k] = ''
+    for k in [ 'module', 'type', 'client', 'hostname', 'user', 'cleartext', 'hash', 'fullhash' ]:
+        if k not in result:
+            result[k] = ''
 
 cursor = DbConnect()
 print(color("[+] Generating report...\n", code = 3, modifier = 1))
@@ -118,8 +118,8 @@ GetResponderUsernamesStatistic(cursor)
 print (color("\n[+] RunFinger Scanned Hosts:", code = 2, modifier = 1))
 cursor.close()
 try:
-	cursor = FingerDbConnect()
-	GetRunFinger(cursor)
+    cursor = FingerDbConnect()
+    GetRunFinger(cursor)
 except Exception:
-	pass
+    pass
 print('\n')

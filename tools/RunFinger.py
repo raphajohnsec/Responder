@@ -59,10 +59,10 @@ class Packet():
         return "".join(map(str, list(self.fields.values())))
 
 if not os.path.exists(DB):
-	cursor = sqlite3.connect(DB)
-	cursor.execute('CREATE TABLE RunFinger (timestamp TEXT, Protocol TEXT, Host TEXT, WindowsVersion TEXT, OsVer TEXT, DomainJoined TEXT, Bootime TEXT, Signing TEXT, NullSess TEXT, IsRDPOn TEXT, SMB1 TEXT, MSSQL TEXT)')
-	cursor.commit()
-	cursor.close()
+    cursor = sqlite3.connect(DB)
+    cursor.execute('CREATE TABLE RunFinger (timestamp TEXT, Protocol TEXT, Host TEXT, WindowsVersion TEXT, OsVer TEXT, DomainJoined TEXT, Bootime TEXT, Signing TEXT, NullSess TEXT, IsRDPOn TEXT, SMB1 TEXT, MSSQL TEXT)')
+    cursor.commit()
+    cursor.close()
 
 def StructWithLenPython2or3(endian,data):
     return struct.pack(endian, data).decode('latin-1')
@@ -84,23 +84,23 @@ def SMB2SigningMandatory(data):
     SMB2signing = "True" if data[70] == "\x03" else "False"
 
 def WorkstationFingerPrint(data):
-	return {
- 		b"\x04\x00"    :"Windows 95",
-		b"\x04\x0A"    :"Windows 98",
-		b"\x04\x5A"    :"Windows ME",
- 		b"\x05\x00"    :"Windows 2000",
- 		b"\x05\x01"    :"Windows XP",
- 		b"\x05\x02"    :"Windows XP(64-Bit)/Windows 2003",
- 		b"\x06\x00"    :"Windows Vista/Server 2008",
- 		b"\x06\x01"    :"Windows 7/Server 2008R2",
- 		b"\x06\x02"    :"Windows 8/Server 2012",
- 		b"\x06\x03"    :"Windows 8.1/Server 2012R2",
-		b"\x0A\x00"    :"Windows 10/Server 2016/2019 (check build)",
- 	}.get(data, 'Other than Microsoft')
+    return {
+        b"\x04\x00"    :"Windows 95",
+        b"\x04\x0A"    :"Windows 98",
+        b"\x04\x5A"    :"Windows ME",
+        b"\x05\x00"    :"Windows 2000",
+        b"\x05\x01"    :"Windows XP",
+        b"\x05\x02"    :"Windows XP(64-Bit)/Windows 2003",
+        b"\x06\x00"    :"Windows Vista/Server 2008",
+        b"\x06\x01"    :"Windows 7/Server 2008R2",
+        b"\x06\x02"    :"Windows 8/Server 2012",
+        b"\x06\x03"    :"Windows 8.1/Server 2012R2",
+        b"\x0A\x00"    :"Windows 10/Server 2016/2019 (check build)",
+    }.get(data, 'Other than Microsoft')
 
 def GetOsBuildNumber(data):
     return struct.unpack("<h",data)[0] 
-		
+        
 def SaveRunFingerToDb(result):
     for k in [ 'Protocol', 'Host', 'WindowsVersion', 'OsVer', 'DomainJoined', 'Bootime', 'Signing','NullSess', 'IsRPDOn', 'SMB1','MSSQL']:
         if k not in result:
@@ -112,11 +112,11 @@ def SaveRunFingerToDb(result):
     (count,) = res.fetchone()
 
     if not count:
-    	cursor.execute("INSERT INTO RunFinger VALUES(datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)", (result['Protocol'], result['Host'], result['WindowsVersion'], result['OsVer'], result['DomainJoined'], result['Bootime'], result['Signing'], result['NullSess'], result['IsRDPOn'], result['SMB1'], result['MSSQL']))
-    	cursor.commit()
+        cursor.execute("INSERT INTO RunFinger VALUES(datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)", (result['Protocol'], result['Host'], result['WindowsVersion'], result['OsVer'], result['DomainJoined'], result['Bootime'], result['Signing'], result['NullSess'], result['IsRDPOn'], result['SMB1'], result['MSSQL']))
+        cursor.commit()
 
     cursor.close()
-		
+        
 def ParseSMBNTLM2Exchange(data, host, bootime, signing):  #Parse SMB NTLMSSP Response
     data = data.encode('latin-1')
     SSPIStart  = data.find(b'NTLMSSP')
@@ -137,35 +137,35 @@ def ParseSMBNTLM2Exchange(data, host, bootime, signing):  #Parse SMB NTLMSSP Res
         f"[SMB2]:['{host}', Os:'{WindowsVers}', Build:'{str(WindowsBuildVers)}', Domain:'{Domain}', Bootime: '{Bootime}', Signing:'{signing}', RDP:'{RDP}', SMB1:'{SMB1}', MSSQL:'{SQL}']"
     )
     SaveRunFingerToDb({
-    			'Protocol': '[SMB2]',
-    			'Host': host, 
-    			'WindowsVersion': WindowsVers,
-    			'OsVer': str(WindowsBuildVers),
-    			'DomainJoined': Domain,
-    			'Bootime': Bootime,
-    			'Signing': signing,
-    			'NullSess': 'N/A',
-    			'IsRDPOn':RDP,
-    			'SMB1': SMB1,
-    			'MSSQL': SQL
-    			})
+                'Protocol': '[SMB2]',
+                'Host': host, 
+                'WindowsVersion': WindowsVers,
+                'OsVer': str(WindowsBuildVers),
+                'DomainJoined': Domain,
+                'Bootime': Bootime,
+                'Signing': signing,
+                'NullSess': 'N/A',
+                'IsRDPOn':RDP,
+                'SMB1': SMB1,
+                'MSSQL': SQL
+                })
 
 def GetBootTime(data):
-	data = data.encode('latin-1')
-	Filetime = int(struct.unpack('<q',data)[0])
-	if Filetime == 0:  # server may not disclose this info
-		return 0, "Unknown"
-	t = divmod(Filetime - 116444736000000000, 10000000)
-	time = datetime.datetime.fromtimestamp(t[0])
-	return time, time.strftime('%Y-%m-%d %H:%M:%S')
+    data = data.encode('latin-1')
+    Filetime = int(struct.unpack('<q',data)[0])
+    if Filetime == 0:  # server may not disclose this info
+        return 0, "Unknown"
+    t = divmod(Filetime - 116444736000000000, 10000000)
+    time = datetime.datetime.fromtimestamp(t[0])
+    return time, time.strftime('%Y-%m-%d %H:%M:%S')
 
 
 def IsDCVuln(t, host):
     if t[0] == 0:
-    	return ("Unknown")
+        return ("Unknown")
     Date = datetime.datetime(2014, 11, 17, 0, 30)
     if t[0] < Date:
-    	return("This system may be vulnerable to MS14-068")
+        return("This system may be vulnerable to MS14-068")
     Date = datetime.datetime(2017, 3, 14, 0, 30)
     return "This system may be vulnerable to MS17-010" if t[0] < Date else t[1]
 
@@ -225,7 +225,7 @@ def DomainGrab(Host):
         data = s.recv(2048)
         s.close()
         if data[8:10] == b'\x72\x00':
-        	return GetHostnameAndDomainName(data)
+            return GetHostnameAndDomainName(data)
     except IOError as e:
         if e.errno == errno.ECONNRESET:
             SMB1 = "False"
@@ -321,13 +321,13 @@ def ConnectAndChoseSMB(host):
     if not ParseNegotiateSMB2Ans(data):
         return False
     try:
-    	while True:
-    		s.send(NetworkSendBufferPython2or3(handle(data.decode('latin-1'), host)))
-    		data = s.recv(4096)
-    		if not data:
-    			break
+        while True:
+            s.send(NetworkSendBufferPython2or3(handle(data.decode('latin-1'), host)))
+            data = s.recv(4096)
+            if not data:
+                break
     except Exception:
-    	pass
+        pass
 
 def handle(data, host):
     if data[28] == "\x00":
@@ -348,7 +348,7 @@ def handle(data, host):
         packet0 =str(a)+str(b)
         return longueur(packet0)+packet0
     if data[28] == "\x02":
-    	ParseSMBNTLM2Exchange(data, host[0], Bootime, SMB2signing) 
+        ParseSMBNTLM2Exchange(data, host[0], Bootime, SMB2signing) 
 
 ##################
 def ShowSmallResults(Host):
@@ -364,18 +364,18 @@ def ShowSmallResults(Host):
             f"[SMB1]:['{Host}', Os:'{OsVer}', Domain:'{DomainJoined}', Signing:'{Signing}', Null Session: '{NullSess}', RDP:'{RDP}', MSSQL:'{SQL}']"
         )
         SaveRunFingerToDb({
-        	'Protocol': '[SMB1]',
-        	'Host': Host, 
-        	'WindowsVersion':OsVer,
-        	'OsVer': OsVer,
-        	'DomainJoined':DomainJoined,
-        	'Bootime': 'N/A',
-        	'Signing': Signing,
-        	'NullSess': NullSess,
-        	'IsRDPOn':RDP,
-        	'SMB1': 'True',
-        	'MSSQL': SQL
-        	})
+            'Protocol': '[SMB1]',
+            'Host': Host, 
+            'WindowsVersion':OsVer,
+            'OsVer': OsVer,
+            'DomainJoined':DomainJoined,
+            'Bootime': 'N/A',
+            'Signing': Signing,
+            'NullSess': NullSess,
+            'IsRDPOn':RDP,
+            'SMB1': 'True',
+            'MSSQL': SQL
+            })
     except Exception:
         return False
 

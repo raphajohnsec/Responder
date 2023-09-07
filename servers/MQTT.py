@@ -23,179 +23,179 @@ from packets import MQTTv3v4ResponsePacket, MQTTv5ResponsePacket
 
 #Read N byte integer
 def readInt(data, offset, numberOfBytes):
-	value = int.from_bytes(data[offset:offset+numberOfBytes], 'big')
-	offset += numberOfBytes
-	return (value, offset)
+    value = int.from_bytes(data[offset:offset+numberOfBytes], 'big')
+    offset += numberOfBytes
+    return (value, offset)
 
 #Read binary data
 def readBinaryData(data, offset):
 
-	#Read number of bytes
-	length, offset = readInt(data, offset, 2)
+    #Read number of bytes
+    length, offset = readInt(data, offset, 2)
 
-	#Read bytes
-	value = data[offset:offset+length]
-	offset += length
+    #Read bytes
+    value = data[offset:offset+length]
+    offset += length
 
-	return (value, offset)
+    return (value, offset)
 
 #Same as readBinaryData() but without reading data
 def skipBinaryDataString(data, offset):
-	length, offset = readInt(data, offset, 2)
-	offset += length
-	return offset
+    length, offset = readInt(data, offset, 2)
+    offset += length
+    return offset
 
 #Read UTF-8 encoded string
 def readString(data, offset):
-	value, offset = readBinaryData(data, offset)
+    value, offset = readBinaryData(data, offset)
 
-	return (value.decode('utf-8'), offset)
+    return (value.decode('utf-8'), offset)
 
 #Read variable byte integer
 #(https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901011)
 def readVariableByteInteger(data, offset):
-	multiplier = 1
-	value = 0
-	while True:
-		encodedByte = data[offset]
-		offset += 1
+    multiplier = 1
+    value = 0
+    while True:
+        encodedByte = data[offset]
+        offset += 1
 
-		value = (encodedByte & 127) * multiplier
+        value = (encodedByte & 127) * multiplier
 
-		if (multiplier > 128 * 128 * 128):
-			return None
+        if (multiplier > 128 * 128 * 128):
+            return None
 
-		multiplier *= 128
+        multiplier *= 128
 
-		if(encodedByte & 128 == 0):
-			break
-	
-	return (value, offset)
+        if(encodedByte & 128 == 0):
+            break
+    
+    return (value, offset)
 
 class MqttPacket:
 
-	USERNAME_FLAG = 0x80
-	PASSWORD_FLAG = 0x40
-	WILL_FLAG = 0x04
+    USERNAME_FLAG = 0x80
+    PASSWORD_FLAG = 0x40
+    WILL_FLAG = 0x04
 
-	def __init__(self, data):
-		self.__isValid = True
+    def __init__(self, data):
+        self.__isValid = True
 
-		controllPacketType, offset = readInt(data, 0, 1)
+        controllPacketType, offset = readInt(data, 0, 1)
 
-		#check if CONNECT packet type
-		if controllPacketType != 0x10:
-			self.__isValid = False
-			return
+        #check if CONNECT packet type
+        if controllPacketType != 0x10:
+            self.__isValid = False
+            return
 
-		#Remaining length
-		remainingLength, offset = readVariableByteInteger(data, offset)
+        #Remaining length
+        remainingLength, offset = readVariableByteInteger(data, offset)
 
-		#Protocol name
-		protocolName, offset = readString(data, offset)
+        #Protocol name
+        protocolName, offset = readString(data, offset)
 
-		#Check protocol name
-		if protocolName not in ["MQTT", "MQIsdp"]:
-			self.__isValid = False
-			return
+        #Check protocol name
+        if protocolName not in ["MQTT", "MQIsdp"]:
+            self.__isValid = False
+            return
 
-		#Check protocol version
-		self.__protocolVersion, offset = readInt(data, offset, 1)
+        #Check protocol version
+        self.__protocolVersion, offset = readInt(data, offset, 1)
 
-		#Read connect flag register
-		connectFlags, offset = readInt(data, offset, 1)
+        #Read connect flag register
+        connectFlags, offset = readInt(data, offset, 1)
 
-		#Read keep alive (skip)
-		offset += 2
+        #Read keep alive (skip)
+        offset += 2
 
-		#MQTTv5 implements properties
-		if self.__protocolVersion > 4:
+        #MQTTv5 implements properties
+        if self.__protocolVersion > 4:
 
-			#Skip all properties
-			propertiesLength, offset = readVariableByteInteger(data, offset)
-			offset+=propertiesLength
+            #Skip all properties
+            propertiesLength, offset = readVariableByteInteger(data, offset)
+            offset+=propertiesLength
 
-		#Get Client ID
-		self.clientId, offset = readString(data, offset)
+        #Get Client ID
+        self.clientId, offset = readString(data, offset)
 
-		if (self.clientId == ""):
-			self.clientId = "<Empty>"
+        if (self.clientId == ""):
+            self.clientId = "<Empty>"
 
-		#Skip Will
-		if (connectFlags & self.WILL_FLAG) > 0:
+        #Skip Will
+        if (connectFlags & self.WILL_FLAG) > 0:
 
-			#MQTT v5 implements properties
-			if self.__protocolVersion > 4:
-				willProperties, offset = readVariableByteInteger(data, offset)
+            #MQTT v5 implements properties
+            if self.__protocolVersion > 4:
+                willProperties, offset = readVariableByteInteger(data, offset)
 
-			#Skip will properties
-			offset = skipBinaryDataString(data, offset)
-			offset = skipBinaryDataString(data, offset)
+            #Skip will properties
+            offset = skipBinaryDataString(data, offset)
+            offset = skipBinaryDataString(data, offset)
 
-		#Get Username
-		if (connectFlags & self.USERNAME_FLAG) > 0:
-			self.username, offset = readString(data, offset)
-		else:
-			self.username = "<Empty>"
+        #Get Username
+        if (connectFlags & self.USERNAME_FLAG) > 0:
+            self.username, offset = readString(data, offset)
+        else:
+            self.username = "<Empty>"
 
-		#Get Password
-		if (connectFlags & self.PASSWORD_FLAG) > 0:
-			self.password, offset = readString(data, offset)
-		else:
-			self.password = "<Empty>"
+        #Get Password
+        if (connectFlags & self.PASSWORD_FLAG) > 0:
+            self.password, offset = readString(data, offset)
+        else:
+            self.password = "<Empty>"
 
-	def isValid(self):
-		return self.__isValid
+    def isValid(self):
+        return self.__isValid
 
-	def getProtocolVersion(self):
-		return self.__protocolVersion
+    def getProtocolVersion(self):
+        return self.__protocolVersion
 
-	def data(self, client):
+    def data(self, client):
 
-		return {
-			'module': 'MQTT',
-			'type': 'Cleartext',
-			'client': client,
-			'hostname': self.clientId,
-			'user': self.username,
-			'cleartext': self.password,
-			'fullhash': f'{self.username}:{self.password}',
-		}
+        return {
+            'module': 'MQTT',
+            'type': 'Cleartext',
+            'client': client,
+            'hostname': self.clientId,
+            'user': self.username,
+            'cleartext': self.password,
+            'fullhash': f'{self.username}:{self.password}',
+        }
 
 class MQTT(BaseRequestHandler):
-	def handle(self):
+    def handle(self):
 
-		CONTROL_PACKET_TYPE_CONNECT = 0x10
+        CONTROL_PACKET_TYPE_CONNECT = 0x10
 
-		try:
-			data = self.request.recv(2048)
+        try:
+            data = self.request.recv(2048)
 
-			#Read control packet type
-			controlPacketType, offset = readInt(data, 0, 1)
+            #Read control packet type
+            controlPacketType, offset = readInt(data, 0, 1)
 
-			#Skip non CONNECT packets
-			if controlPacketType != CONTROL_PACKET_TYPE_CONNECT:
-				return
+            #Skip non CONNECT packets
+            if controlPacketType != CONTROL_PACKET_TYPE_CONNECT:
+                return
 
-			#Parse connect packet
-			packet = MqttPacket(data)
+            #Parse connect packet
+            packet = MqttPacket(data)
 
-			#Skip if it contains invalid data
-			if not packet.isValid():
-				#Return response
-				return
+            #Skip if it contains invalid data
+            if not packet.isValid():
+                #Return response
+                return
 
-			#Send response packet
-			if packet.getProtocolVersion() < 5:
-				responsePacket = MQTTv3v4ResponsePacket()
-			else:
-				responsePacket = MQTTv5ResponsePacket()
+            #Send response packet
+            if packet.getProtocolVersion() < 5:
+                responsePacket = MQTTv3v4ResponsePacket()
+            else:
+                responsePacket = MQTTv5ResponsePacket()
 
-			self.request.send(NetworkSendBufferPython2or3(responsePacket))
+            self.request.send(NetworkSendBufferPython2or3(responsePacket))
 
-			#Save to DB
-			SaveToDb(packet.data(self.client_address[0]))
+            #Save to DB
+            SaveToDb(packet.data(self.client_address[0]))
 
 
-		except Exception:
-			raise
+        except Exception:
+            raise

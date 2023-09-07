@@ -193,7 +193,7 @@ def DomainGrab(Host):
         data = s.recv(2048)
         s.close()
         if data[8:10] == b'\x72\x00':
-        	return GetHostnameAndDomainName(data)
+            return GetHostnameAndDomainName(data)
     except IOError as e:
         if e.errno != errno.ECONNRESET:
             return False
