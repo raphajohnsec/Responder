@@ -15,12 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from utils import *
-if settings.Config.PY2OR3 == "PY3":
-	import urllib.parse as urlparse
-	import http.server as BaseHTTPServer
-else:
-	import urlparse
-	import BaseHTTPServer
+import urllib.parse as urlparse
+import http.server as BaseHTTPServer
+
 
 import select
 import zlib

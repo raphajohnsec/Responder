@@ -16,30 +16,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import struct
 import sys
-if (sys.version_info > (3, 0)):
-	from socketserver import BaseRequestHandler
-else:
-	from SocketServer import BaseRequestHandler
+from socketserver import BaseRequestHandler
 from packets import MDNS_Ans, MDNS6_Ans
 from utils import *
 
 def Parse_MDNS_Name(data):
 	try:
-		if (sys.version_info > (3, 0)):
-			data = data[12:]
-			NameLen = data[0]
-			Name = data[1:1+NameLen]
-			NameLen_ = data[1+NameLen]
-			Name_ = data[1+NameLen:1+NameLen+NameLen_+1]
-			FinalName = Name+b'.'+Name_
-			return FinalName.decode("latin-1").replace("\x05","")
-		else:
-			data = NetworkRecvBufferPython2or3(data[12:])
-			NameLen = struct.unpack('>B',data[0])[0]
-			Name = data[1:1+NameLen]
-			NameLen_ = struct.unpack('>B',data[1+NameLen])[0]
-			Name_ = data[1+NameLen:1+NameLen+NameLen_+1]
-			return Name+'.'+Name_.replace("\x05","")
+		data = data[12:]
+		NameLen = data[0]
+		Name = data[1:1+NameLen]
+		NameLen_ = data[1+NameLen]
+		Name_ = data[1+NameLen:1+NameLen+NameLen_+1]
+		FinalName = Name+b'.'+Name_
+		return FinalName.decode("latin-1").replace("\x05","")
 
 	except IndexError:
 		return None

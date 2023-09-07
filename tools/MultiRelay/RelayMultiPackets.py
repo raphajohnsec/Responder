@@ -37,19 +37,9 @@ class Packet():
 	def __str__(self):
 		return "".join(map(str, self.fields.values()))
 
-#Python version
-if (sys.version_info > (3, 0)):
-    PY2OR3     = "PY3"
-else:
-    PY2OR3  = "PY2"
 
 def StructWithLenPython2or3(endian,data):
-	#Python2...
-	if PY2OR3 == "PY2":
-		return struct.pack(endian, data)
-	#Python3...
-	else:
-		return struct.pack(endian, data).decode('latin-1')
+	return struct.pack(endian, data).decode('latin-1')
 
 ##################HTTP Proxy Relay##########################
 def HTTPCurrentDate():

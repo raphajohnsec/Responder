@@ -17,10 +17,7 @@
 
 from utils import settings, NetworkSendBufferPython2or3, SaveToDb
 
-if settings.Config.PY2OR3 == "PY3":
-	from socketserver import BaseRequestHandler
-else:
-	from SocketServer import BaseRequestHandler
+from socketserver import BaseRequestHandler
 
 from packets import MQTTv3v4ResponsePacket, MQTTv5ResponsePacket
 

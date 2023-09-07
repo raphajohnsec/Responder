@@ -16,10 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from utils import *
 from packets import SMBHeader, SMBNegoData, SMBSessionData, SMBTreeConnectData, RAPNetServerEnum3Data, SMBTransRAPData
-if settings.Config.PY2OR3 == "PY3":
-	from socketserver import BaseRequestHandler
-else:
-	from SocketServer import BaseRequestHandler
+from socketserver import BaseRequestHandler
 import struct
 
 

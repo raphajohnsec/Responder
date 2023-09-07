@@ -75,24 +75,14 @@ class OrderedDict(dict, DictMixin):
     def keys(self):
         return list(self)
 
-    if sys.version_info >= (3, 0):
-        setdefault = DictMixin.setdefault
-        update = DictMixin.update
-        pop = DictMixin.pop
-        values = DictMixin.values
-        items = DictMixin.items
-        iterkeys = DictMixin.keys
-        itervalues = DictMixin.values
-        iteritems = DictMixin.items
-    else:
-        setdefault = DictMixin.setdefault
-        update = DictMixin.update
-        pop = DictMixin.pop
-        values = DictMixin.values
-        items = DictMixin.items
-        iterkeys = DictMixin.iterkeys
-        itervalues = DictMixin.itervalues
-        iteritems = DictMixin.iteritems
+    setdefault = DictMixin.setdefault
+    update = DictMixin.update
+    pop = DictMixin.pop
+    values = DictMixin.values
+    items = DictMixin.items
+    iterkeys = DictMixin.keys
+    itervalues = DictMixin.values
+    iteritems = DictMixin.items
 
     def __repr__(self):
         if not self:

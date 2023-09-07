@@ -17,10 +17,8 @@
 import struct, re
 import codecs
 from utils import *
-if settings.Config.PY2OR3 == "PY3":
-	from socketserver import BaseRequestHandler
-else:
-	from SocketServer import BaseRequestHandler
+from socketserver import BaseRequestHandler
+
 from random import randrange
 from packets import SMBHeader, SMBNegoAnsLM, SMBNegoKerbAns, SMBSession1Data, SMBSession2Accept, SMBSessEmpty, SMBTreeData, SMB2Header, SMB2NegoAns, SMB2Session1Data, SMB2Session2Data
 

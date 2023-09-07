@@ -16,10 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 from utils import *
-if (sys.version_info > (3, 0)):
-	from socketserver import BaseRequestHandler
-else:
-	from SocketServer import BaseRequestHandler
+
+from socketserver import BaseRequestHandler
 from packets import IMAPGreeting, IMAPCapability, IMAPCapabilityEnd
 
 class IMAP(BaseRequestHandler):

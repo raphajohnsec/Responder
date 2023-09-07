@@ -61,13 +61,6 @@ class Packet():
     def __str__(self):
         return "".join(map(str, list(self.fields.values())))
 
-#Python version
-if (sys.version_info > (3, 0)):
-    PY2OR3     = "PY3"
-else:
-    PY2OR3  = "PY2"
-
-
 if not os.path.exists(DB):
 	cursor = sqlite3.connect(DB)
 	cursor.execute('CREATE TABLE RunFinger (timestamp TEXT, Protocol TEXT, Host TEXT, WindowsVersion TEXT, OsVer TEXT, DomainJoined TEXT, Bootime TEXT, Signing TEXT, NullSess TEXT, IsRDPOn TEXT, SMB1 TEXT, MSSQL TEXT)')
@@ -75,24 +68,13 @@ if not os.path.exists(DB):
 	cursor.close()
 
 def StructWithLenPython2or3(endian,data):
-    #Python2...
-    if PY2OR3 == "PY2":
-        return struct.pack(endian, data)
-    #Python3...
-    else:
-        return struct.pack(endian, data).decode('latin-1')
+    return struct.pack(endian, data).decode('latin-1')
 
 def NetworkSendBufferPython2or3(data):
-    if PY2OR3 == "PY2":
-        return str(data)
-    else:
-        return bytes(str(data), 'latin-1')
+    return bytes(str(data), 'latin-1')
 
 def NetworkRecvBufferPython2or3(data):
-    if PY2OR3 == "PY2":
-        return str(data)
-    else:
-        return str(data.decode('latin-1'))
+    return str(data.decode('latin-1'))
 
 def longueur(payload):
     length = StructWithLenPython2or3(">i", len(''.join(payload)))
@@ -214,10 +196,7 @@ def dtoa(d):
 
 def OsNameClientVersion(data):
     try:
-        if PY2OR3 == "PY3":
-                length = struct.unpack('<H',data[43:45].encode('latin-1'))[0]
-        else:
-                length = struct.unpack('<H',data[43:45])[0]
+        length = struct.unpack('<H',data[43:45].encode('latin-1'))[0]
         if length > 255:
             OsVersion, ClientVersion = tuple([e.replace("\x00", "") for e in data[47+length:].split('\x00\x00\x00')[:2]])
             return OsVersion, ClientVersion

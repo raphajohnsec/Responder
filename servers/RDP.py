@@ -19,10 +19,8 @@ import struct
 import re
 import ssl
 import codecs
-if settings.Config.PY2OR3 == "PY3":
-	from socketserver import BaseRequestHandler
-else:
-	from SocketServer import BaseRequestHandler
+from socketserver import BaseRequestHandler
+
 
 from packets import TPKT, X224, RDPNEGOAnswer, RDPNTLMChallengeAnswer
 

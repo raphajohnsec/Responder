@@ -15,10 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import utils, sys, random
-if (sys.version_info > (3, 0)):
-	import configparser as ConfigParser
-else:
-	import ConfigParser
+import configparser as ConfigParser
 import subprocess
 
 from utils import *
@@ -106,11 +103,7 @@ class Settings:
 		if options.Interface == "ALL" and options.OURIP == None:
 			print(utils.color("Error: -i is missing.\nWhen using -I ALL you need to provide your current ip address", 1))
 			sys.exit(-1)
-		#Python version
-		if (sys.version_info > (3, 0)):
-			self.PY2OR3     = "PY3"
-		else:
-			self.PY2OR3	= "PY2"
+
 		# Config parsing
 		config = ConfigParser.ConfigParser()
 		config.read(os.path.join(self.ResponderPATH, 'Responder.conf'))
@@ -287,11 +280,7 @@ class Settings:
 		if self.NumChal.lower() == 'random':
 			pass
 		else:
-			if self.PY2OR3 == 'PY2':
-				for i in range(0, len(self.NumChal),2):
-					self.Challenge += self.NumChal[i:i+2].decode("hex")
-			else:
-					self.Challenge = bytes.fromhex(self.NumChal)
+			self.Challenge = bytes.fromhex(self.NumChal)
 
 
 		# Set up logging

@@ -18,10 +18,7 @@ import sys
 from packets import NBT_Ans
 from utils import *
 
-if (sys.version_info > (3, 0)):
-	from socketserver import BaseRequestHandler
-else:
-	from SocketServer import BaseRequestHandler
+from socketserver import BaseRequestHandler
 
 # NBT_NS Server class.
 class NBTNS(BaseRequestHandler):

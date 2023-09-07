@@ -16,10 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import sys
-if (sys.version_info > (3, 0)):
-    PY2OR3     = "PY3"
-else:
-    PY2OR3  = "PY2"
 import struct
 import random
 import time
@@ -65,24 +61,13 @@ class Packet():
         return "".join(map(str, list(self.fields.values())))
 
 def StructWithLenPython2or3(endian,data):
-	#Python2...
-	if PY2OR3 == "PY2":
-		return struct.pack(endian, data)
-	#Python3...
-	else:
-		return struct.pack(endian, data).decode('latin-1')
+	return struct.pack(endian, data).decode('latin-1')
 
 def NetworkSendBufferPython2or3(data):
-	if PY2OR3 == "PY2":
-		return str(data)
-	else:
-		return bytes(str(data), 'latin-1')
+	return bytes(str(data), 'latin-1')
 
 def NetworkRecvBufferPython2or3(data):
-	if PY2OR3 == "PY2":
-		return str(data)
-	else:
-		return str(data.decode('latin-1'))
+	return str(data.decode('latin-1'))
 
 # Function used to write captured hashs to a file.
 def WriteData(outfile, data, user):

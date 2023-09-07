@@ -17,19 +17,16 @@
 from packets import LLMNR_Ans, LLMNR6_Ans
 from utils import *
 
-if (sys.version_info > (3, 0)):
-	from socketserver import BaseRequestHandler
-else:
-	from SocketServer import BaseRequestHandler
+
+from socketserver import BaseRequestHandler
+
 
 def Parse_LLMNR_Name(data):
 	import codecs
 	NameLen = data[12]
-	if (sys.version_info > (3, 0)):
-		return data[13:13+NameLen]
-	else:
-		NameLen2 = int(codecs.encode(NameLen, 'hex'), 16)
-		return data[13:13+int(NameLen2)]
+
+	return data[13:13+NameLen]
+
 
 def IsICMPRedirectPlausible(IP):
 	dnsip = []
@@ -39,7 +36,9 @@ def IsICMPRedirectPlausible(IP):
 			if len(ip) < 2:
 				continue
 			elif ip[0] == 'nameserver':
-				dnsip.extend(ip[1:])
+				# TODO: nameserver entries can contain up to three hosts
+				# https://man7.org/linux/man-pages/man5/resolv.conf.5.html
+				dnsip.extend([ip[1].strip()])
 		for x in dnsip:
 			if x != "127.0.0.1" and IsIPv6IP(x) is False and IsOnTheSameSubnet(x,IP) is False:	#Temp fix to ignore IPv6 DNS addresses
 				print(color("[Analyze mode: ICMP] You can ICMP Redirect on this network.", 5))

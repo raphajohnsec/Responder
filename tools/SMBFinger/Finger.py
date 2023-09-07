@@ -37,33 +37,16 @@ class Packet():
     def __str__(self):
         return "".join(map(str, list(self.fields.values())))
 
-#Python version
-if (sys.version_info > (3, 0)):
-    PY2OR3     = "PY3"
-else:
-    PY2OR3  = "PY2"
-
 SMB1 = "Enabled"
 
 def StructWithLenPython2or3(endian,data):
-    #Python2...
-    if PY2OR3 == "PY2":
-        return struct.pack(endian, data)
-    #Python3...
-    else:
-        return struct.pack(endian, data).decode('latin-1')
+    return struct.pack(endian, data).decode('latin-1')
 
 def NetworkSendBufferPython2or3(data):
-    if PY2OR3 == "PY2":
-        return str(data)
-    else:
-        return bytes(str(data), 'latin-1')
+    return bytes(str(data), 'latin-1')
 
 def NetworkRecvBufferPython2or3(data):
-    if PY2OR3 == "PY2":
-        return str(data)
-    else:
-        return str(data.decode('latin-1'))
+    return str(data.decode('latin-1'))
 
 def longueur(payload):
     length = StructWithLenPython2or3(">i", len(''.join(payload)))

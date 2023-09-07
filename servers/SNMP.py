@@ -18,10 +18,8 @@ from utils import *
 from binascii import hexlify
 from pyasn1.codec.ber.decoder import decode
 
-if settings.Config.PY2OR3 == "PY3":
-    from socketserver import BaseRequestHandler
-else:
-    from SocketServer import BaseRequestHandler
+from socketserver import BaseRequestHandler
+
 
 class SNMP(BaseRequestHandler):
     def handle(self):

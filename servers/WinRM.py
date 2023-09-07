@@ -17,10 +17,7 @@
 import struct
 import codecs
 from utils import *
-if settings.Config.PY2OR3 == "PY3":
-	from socketserver import BaseRequestHandler, StreamRequestHandler
-else:
-	from SocketServer import BaseRequestHandler, StreamRequestHandler
+from socketserver import BaseRequestHandler, StreamRequestHandler
 from base64 import b64decode, b64encode
 from packets import NTLM_Challenge
 from packets import IIS_Auth_401_Ans, IIS_Auth_Granted, IIS_NTLM_Challenge_Ans, IIS_Basic_401_Ans,WEBDAV_Options_Answer, WinRM_NTLM_Challenge_Ans

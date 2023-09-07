@@ -17,10 +17,7 @@
 import codecs
 import struct
 from utils import *
-if settings.Config.PY2OR3 == "PY3":
-	from socketserver import BaseRequestHandler
-else:
-	from SocketServer import BaseRequestHandler
+from socketserver import BaseRequestHandler
 
 
 def ParseMSKerbv5TCP(Data):
