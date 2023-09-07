@@ -15,11 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import codecs
-import random
 import re
-import struct
-from base64 import b64decode, b64encode
+from base64 import b64encode
 from os import urandom
 
 import settings
@@ -1105,8 +1102,8 @@ class CLDAPNetlogon(Packet):
 
     def calculate(self):
         ###### LDAP Packet Len
-        CalculatePacketLen = str(self.fields["MessageIDASNID"])+str(self.fields["MessageIDASNLen"])+str(self.fields["MessageIDASNStr"])+str(self.fields["OpHeadASNID"])+str(self.fields["OpHeadASNIDLenOfLen"])+str(self.fields["OpHeadASNIDLen"])+str(self.fields["Status"])+str(self.fields["StatusASNLen"])+str(self.fields["StatusASNStr"])+str(self.fields["SequenceHeader"])+str(self.fields["SequenceHeaderLen"])+str(self.fields["SequenceHeaderLenOfLen"])
-        OperationPacketLen = str(self.fields["Status"])+str(self.fields["StatusASNLen"])+str(self.fields["StatusASNStr"])+str(self.fields["SequenceHeader"])+str(self.fields["SequenceHeaderLen"])+str(self.fields["SequenceHeaderLenOfLen"])
+        str(self.fields["MessageIDASNID"])+str(self.fields["MessageIDASNLen"])+str(self.fields["MessageIDASNStr"])+str(self.fields["OpHeadASNID"])+str(self.fields["OpHeadASNIDLenOfLen"])+str(self.fields["OpHeadASNIDLen"])+str(self.fields["Status"])+str(self.fields["StatusASNLen"])+str(self.fields["StatusASNStr"])+str(self.fields["SequenceHeader"])+str(self.fields["SequenceHeaderLen"])+str(self.fields["SequenceHeaderLenOfLen"])
+        str(self.fields["Status"])+str(self.fields["StatusASNLen"])+str(self.fields["StatusASNStr"])+str(self.fields["SequenceHeader"])+str(self.fields["SequenceHeaderLen"])+str(self.fields["SequenceHeaderLenOfLen"])
 
         ###### Netlogon + Search Successfull Len
         CalculateNetlogonLen = str(self.fields["NTLogonOpcode"])+str(self.fields["NTLogonSbz"])+str(self.fields["NTLogonFlags"])+str(self.fields["NTLogonDomainGUID"])+str(self.fields["NTLogonForestName"])+str(self.fields["NTLogonForestNameNull"])+str(self.fields["NTLogonDomainNamePtr"])+str(self.fields["NTLogonDomainNamePtrOffset"])+str(self.fields["NTLogonPDCNBTName"])+str(self.fields["NTLogonPDCNBTTLDPtr"])+str(self.fields["NTLogonDomainNameShort"])+str(self.fields["NTLogonDomainNameShortNull"])+str(self.fields["NTLogonDomainNBTName"])+str(self.fields["NTLogonDomainNBTNameNull"])+str(self.fields["NTLogonUsername"])+str(self.fields["DCSiteName"])+str(self.fields["ClientSiteNamePtr"])+str(self.fields["ClientSiteNamePtrOffset"])+str(self.fields["NTLogonVersion"])+str(self.fields["LMNTToken"])+str(self.fields["LM2Token"]) #115 now.

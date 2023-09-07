@@ -37,8 +37,8 @@ class Settings:
             ret += "    Settings.%s = %s\n" % (attr, value)
         return ret
 
-    def toBool(self, str):
-        return str.upper() == 'ON'
+    def toBool(self, str_):
+        return str_.upper() == 'ON'
 
     def ExpandIPRanges(self):
         def expand_ranges(lst):
@@ -318,7 +318,7 @@ class Settings:
         # First time Responder run?
         if not os.path.isfile(f'{self.ResponderPATH}/Responder.db'):
             #If it's the first time, generate SSL certs for this Responder session and send openssl output to /dev/null
-            Certs = os.system(
+            os.system(
                 f"{self.ResponderPATH}/certs/gen-self-signed-cert.sh >/dev/null 2>&1"
             )
 

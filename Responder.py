@@ -70,10 +70,8 @@ class ThreadingUDPServer(ThreadingMixIn, UDPServer):
         if OsInterfaceIsSupported():
             with contextlib.suppress(Exception):
                 if not settings.Config.Bind_To_ALL:
-
                     self.socket.setsockopt(socket.SOL_SOCKET, 25, bytes(settings.Config.Interface+'\0', 'utf-8'))
-
-                    self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
+                    # self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
         UDPServer.server_bind(self)
 
 class ThreadingTCPServer(ThreadingMixIn, TCPServer):
@@ -82,7 +80,7 @@ class ThreadingTCPServer(ThreadingMixIn, TCPServer):
             with contextlib.suppress(Exception):
                 if not settings.Config.Bind_To_ALL:
                     self.socket.setsockopt(socket.SOL_SOCKET, 25, bytes(settings.Config.Interface+'\0', 'utf-8'))
-                    self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
+                    # self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
         TCPServer.server_bind(self)
 
 class ThreadingTCPServerAuth(ThreadingMixIn, TCPServer):
@@ -91,7 +89,7 @@ class ThreadingTCPServerAuth(ThreadingMixIn, TCPServer):
             with contextlib.suppress(Exception):
                 if not settings.Config.Bind_To_ALL:
                     self.socket.setsockopt(socket.SOL_SOCKET, 25, bytes(settings.Config.Interface+'\0', 'utf-8'))
-                    self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
+                    # self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
         TCPServer.server_bind(self)
 
@@ -105,12 +103,12 @@ class ThreadingUDPMDNSServer(ThreadingMixIn, UDPServer):
 
         #IPV6:
         mreq = socket.inet_pton(socket.AF_INET6, MADDR6) + struct.pack('@I', if_nametoindex2(settings.Config.Interface))
-        self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, mreq)
+        # self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, mreq)
         if OsInterfaceIsSupported():
             with contextlib.suppress(Exception):
                 if not settings.Config.Bind_To_ALL:
                     self.socket.setsockopt(socket.SOL_SOCKET, 25, bytes(settings.Config.Interface+'\0', 'utf-8'))
-                    self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
+                    # self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
         UDPServer.server_bind(self)
 
 class ThreadingUDPLLMNRServer(ThreadingMixIn, UDPServer):
@@ -123,29 +121,29 @@ class ThreadingUDPLLMNRServer(ThreadingMixIn, UDPServer):
 
         #IPV6:
         mreq = socket.inet_pton(socket.AF_INET6, MADDR6) + struct.pack('@I', if_nametoindex2(settings.Config.Interface))
-        self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, mreq)
+        # self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, mreq)
         if OsInterfaceIsSupported():
             with contextlib.suppress(Exception):
                 if not settings.Config.Bind_To_ALL:
                     self.socket.setsockopt(socket.SOL_SOCKET, 25, bytes(settings.Config.Interface+'\0', 'utf-8'))
-                    self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
+                    # self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
         UDPServer.server_bind(self)
         
 
 ThreadingUDPServer.allow_reuse_address = 1
-ThreadingUDPServer.address_family = socket.AF_INET6
+# ThreadingUDPServer.address_family = socket.AF_INET6
 
 ThreadingTCPServer.allow_reuse_address = 1
-ThreadingTCPServer.address_family = socket.AF_INET6
+# ThreadingTCPServer.address_family = socket.AF_INET6
 
 ThreadingUDPMDNSServer.allow_reuse_address = 1
-ThreadingUDPMDNSServer.address_family = socket.AF_INET6
+# ThreadingUDPMDNSServer.address_family = socket.AF_INET6
 
 ThreadingUDPLLMNRServer.allow_reuse_address = 1
-ThreadingUDPLLMNRServer.address_family = socket.AF_INET6
+# ThreadingUDPLLMNRServer.address_family = socket.AF_INET6
 
 ThreadingTCPServerAuth.allow_reuse_address = 1
-ThreadingTCPServerAuth.address_family = socket.AF_INET6
+# ThreadingTCPServerAuth.address_family = socket.AF_INET6
 
 def serve_thread_udp_broadcast(host, port, handler):
     try:
@@ -182,15 +180,17 @@ def serve_thread_tcp(host, port, handler):
     try:
         server = ThreadingTCPServer((host, port), handler)
         server.serve_forever()
-    except Exception:
-        print(color("[!] ", 1, 1) + "Error starting TCP server on port " + str(port) + ", check permissions or other servers running.")
+    except Exception as e:
+        print(fr"{host}")
+        print(e)
+        print(color("[!] ", 1, 1) + f"Error starting TCP server on {host}:{str(port)} check permissions or other servers running.")
 
 def serve_thread_tcp_auth(host, port, handler):
     try:
         server = ThreadingTCPServerAuth((host, port), handler)
         server.serve_forever()
     except Exception:
-        print(color("[!] ", 1, 1) + "Error starting TCP server on port " + str(port) + ", check permissions or other servers running.")
+        print(color("[!] ", 1, 1) + f"Error starting TCP server on {host}:{str(port)} check permissions or other servers running.")
 
 def serve_thread_SSL(host, port, handler):
     try:
