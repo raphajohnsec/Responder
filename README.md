@@ -5,6 +5,13 @@ IPv6/IPv4 LLMNR/NBT-NS/mDNS Poisoner and NTLMv1/2 Relay.
 Author: Laurent Gaffie <laurent.gaffie@gmail.com >  https://g-laurent.blogspot.com
 
 
+## Fork Changes ##
+Thanks to Laurent and all contributors for their work with this tool. This fork focuses on removing the Python 2 support and a more clean code.
+Things done so far:
+- Replace tabs with spaces to have a clean intendation
+- Sourcery refactor
+- Remove Python 2 clauses
+
 
 ## Intro ##
 
