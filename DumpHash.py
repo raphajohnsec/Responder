@@ -21,28 +21,19 @@ def DumpHashToFile(outfile, data):
 		dump.write(data)
 
 def DbConnect():
-    cursor = sqlite3.connect("./Responder.db")
-    return cursor
+	return sqlite3.connect("./Responder.db")
 
 def GetResponderCompleteNTLMv2Hash(cursor):
-     res = cursor.execute("SELECT fullhash FROM Responder WHERE type LIKE '%v2%' AND UPPER(user) in (SELECT DISTINCT UPPER(user) FROM Responder)")
-     Output = ""
-     for row in res.fetchall():
-         if "$" in row[0]:
-             pass
-         else:
-            Output += '{0}'.format(row[0])+'\n'
-     return Output
+	res = cursor.execute("SELECT fullhash FROM Responder WHERE type LIKE '%v2%' AND UPPER(user) in (SELECT DISTINCT UPPER(user) FROM Responder)")
+	return "".join(
+		'{0}'.format(row[0]) + '\n' for row in res.fetchall() if "$" not in row[0]
+	)
 
 def GetResponderCompleteNTLMv1Hash(cursor):
-     res = cursor.execute("SELECT fullhash FROM Responder WHERE type LIKE '%v1%' AND UPPER(user) in (SELECT DISTINCT UPPER(user) FROM Responder)")
-     Output = ""
-     for row in res.fetchall():
-         if "$" in row[0]:
-             pass
-         else:
-            Output += '{0}'.format(row[0])+'\n'
-     return Output
+	res = cursor.execute("SELECT fullhash FROM Responder WHERE type LIKE '%v1%' AND UPPER(user) in (SELECT DISTINCT UPPER(user) FROM Responder)")
+	return "".join(
+		'{0}'.format(row[0]) + '\n' for row in res.fetchall() if "$" not in row[0]
+	)
 
 cursor = DbConnect()
 print("Dumping NTLMV2 hashes:")

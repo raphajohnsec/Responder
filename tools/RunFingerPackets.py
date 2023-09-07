@@ -20,10 +20,7 @@ class Packet():
     def __init__(self, **kw):
         self.fields = OrderedDict(self.__class__.fields)
         for k,v in list(kw.items()):
-            if callable(v):
-                self.fields[k] = v(self.fields[k])
-            else:
-                self.fields[k] = v
+            self.fields[k] = v(self.fields[k]) if callable(v) else v
     def __str__(self):
         return "".join(map(str, list(self.fields.values())))
 

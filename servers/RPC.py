@@ -38,10 +38,7 @@ WINSPOOL = "\x96\x3f\xf0\x76\xfd\xcd\xfc\x44\xa2\x2c\x64\x95\x0a\x00\x12\x09" #v
 
 
 def Chose3264x(packet):
-	if Map32 in packet:
-		return Map32
-	else:
-		return Map64
+	return Map32 if Map32 in packet else Map64
 
 def FindNTLMOpcode(data):
 	SSPIStart  = data.find(b'NTLMSSP')
@@ -69,7 +66,7 @@ def ParseRPCHash(data,client, Challenge):  #Parse NTLMSSP v1/v2
 		UserLen      = struct.unpack('<H',SSPIString[38:40])[0]
 		UserOffset   = struct.unpack('<H',SSPIString[40:42])[0]
 		Username     = SSPIString[UserOffset:UserOffset+UserLen].decode('UTF-16LE')
-		WriteHash    = '%s::%s:%s:%s:%s' % (Username, Domain, LMHash, SMBHash, codecs.encode(Challenge,'hex').decode('latin-1'))
+		WriteHash = f"{Username}::{Domain}:{LMHash}:{SMBHash}:{codecs.encode(Challenge, 'hex').decode('latin-1')}"
 
 		SaveToDb({
 			'module': 'DCE-RPC', 
@@ -89,7 +86,7 @@ def ParseRPCHash(data,client, Challenge):  #Parse NTLMSSP v1/v2
 		UserLen      = struct.unpack('<H',SSPIString[38:40])[0]
 		UserOffset   = struct.unpack('<H',SSPIString[40:42])[0]
 		Username     = SSPIString[UserOffset:UserOffset+UserLen].decode('UTF-16LE')
-		WriteHash    = '%s::%s:%s:%s:%s' % (Username, Domain, codecs.encode(Challenge,'hex').decode('latin-1'), SMBHash[:32], SMBHash[32:])
+		WriteHash = f"{Username}::{Domain}:{codecs.encode(Challenge, 'hex').decode('latin-1')}:{SMBHash[:32]}:{SMBHash[32:]}"
 
 		SaveToDb({
 			'module': 'DCE-RPC', 
@@ -106,7 +103,7 @@ class RPCMap(BaseRequestHandler):
 			data = self.request.recv(1024)
 			self.request.settimeout(5)
 			Challenge = RandomChallenge()
-			if data[0:3] == b"\x05\x00\x0b":#Bind Req.
+			if data[:3] == b"\x05\x00\x0b":#Bind Req.
 				#More recent windows version can and will bind on port 135...Let's grab it.
 				if FindNTLMOpcode(data) == b"\x01\x00\x00\x00":
 					n = NTLMChallenge(NTLMSSPNtServerChallenge=NetworkRecvBufferPython2or3(Challenge))
@@ -132,7 +129,7 @@ class RPCMap(BaseRequestHandler):
 				self.request.send(NetworkSendBufferPython2or3(str(RPC)))
 				data = self.request.recv(1024)
 
-			if data[0:3] == b"\x05\x00\x00":#Mapper Response.
+			if data[:3] == b"\x05\x00\x00":#Mapper Response.
 
 				# DSRUAPI
 				if NetworkSendBufferPython2or3(DSRUAPI) in data:
@@ -182,7 +179,6 @@ class RPCMap(BaseRequestHandler):
 
 		except Exception:
 			self.request.close()
-			pass
 
 
 
@@ -207,6 +203,5 @@ class RPCMapper(BaseRequestHandler):
 
 		except Exception:
 			self.request.close()
-			pass
 
 

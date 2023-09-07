@@ -46,7 +46,7 @@ def ParseNTLMHash(data,client, Challenge):  #Parse NTLMSSP v1/v2
 		UserLen      = struct.unpack('<H',SSPIString[38:40])[0]
 		UserOffset   = struct.unpack('<H',SSPIString[40:42])[0]
 		Username     = SSPIString[UserOffset:UserOffset+UserLen].decode('UTF-16LE')
-		WriteHash    = '%s::%s:%s:%s:%s' % (Username, Domain, LMHash, SMBHash, codecs.encode(Challenge,'hex').decode('latin-1'))
+		WriteHash = f"{Username}::{Domain}:{LMHash}:{SMBHash}:{codecs.encode(Challenge, 'hex').decode('latin-1')}"
 
 		SaveToDb({
 			'module': 'RDP', 
@@ -66,7 +66,7 @@ def ParseNTLMHash(data,client, Challenge):  #Parse NTLMSSP v1/v2
 		UserLen      = struct.unpack('<H',SSPIString[38:40])[0]
 		UserOffset   = struct.unpack('<H',SSPIString[40:42])[0]
 		Username     = SSPIString[UserOffset:UserOffset+UserLen].decode('UTF-16LE')
-		WriteHash    = '%s::%s:%s:%s:%s' % (Username, Domain, codecs.encode(Challenge,'hex').decode('latin-1'), SMBHash[:32], SMBHash[32:])
+		WriteHash = f"{Username}::{Domain}:{codecs.encode(Challenge, 'hex').decode('latin-1')}:{SMBHash[:32]}:{SMBHash[32:]}"
 
 		SaveToDb({
 			'module': 'RDP', 
@@ -84,10 +84,7 @@ def FindNTLMNegoStep(data):
 	NTLMStep = NTLMString[8:12]
 	if NTLMStep == b'\x01\x00\x00\x00':
 		return NTLMStep
-	if NTLMStep == b'\x03\x00\x00\x00':
-		return NTLMStep
-	else:
-		return False
+	return NTLMStep if NTLMStep == b'\x03\x00\x00\x00' else False
 
 class RDP(BaseRequestHandler):
 	def handle(self):
@@ -119,26 +116,24 @@ class RDP(BaseRequestHandler):
 					if FindNTLMNegoStep(data) == b'\x03\x00\x00\x00':
 						ParseNTLMHash(data,self.client_address[0], Challenge)
 
-			##Sometimes a client sends a routing cookie; we don't want to miss that let's look at it the other way around..
-			if data[len(data)-4:] == b'\x03\x00\x00\x00':
-				x =  X224(Data=RDPNEGOAnswer())
-				x.calculate()
-				h = TPKT(Data=x)
-				h.calculate()
-				buffer1 = str(h)
-				self.request.send(NetworkSendBufferPython2or3(buffer1))
-				data = self.request.recv(8092)
-				SSLsock = context.wrap_socket(self.request, server_side=True)
-				data = SSLsock.read(8092)
-				if FindNTLMNegoStep(data) == b'\x01\x00\x00\x00':
-					x = RDPNTLMChallengeAnswer(NTLMSSPNtServerChallenge=NetworkRecvBufferPython2or3(Challenge))
-					x.calculate()
-					SSLsock.write(NetworkSendBufferPython2or3(x))
-					data = SSLsock.read(8092)
-					if FindNTLMNegoStep(data) == b'\x03\x00\x00\x00':
-						ParseNTLMHash(data,self.client_address[0], Challenge)
-
-			else:
+			if data[len(data) - 4 :] != b'\x03\x00\x00\x00':
 				return False
-		except:
+			x =  X224(Data=RDPNEGOAnswer())
+			x.calculate()
+			h = TPKT(Data=x)
+			h.calculate()
+			buffer1 = str(h)
+			self.request.send(NetworkSendBufferPython2or3(buffer1))
+			data = self.request.recv(8092)
+			SSLsock = context.wrap_socket(self.request, server_side=True)
+			data = SSLsock.read(8092)
+			if FindNTLMNegoStep(data) == b'\x01\x00\x00\x00':
+				x = RDPNTLMChallengeAnswer(NTLMSSPNtServerChallenge=NetworkRecvBufferPython2or3(Challenge))
+				x.calculate()
+				SSLsock.write(NetworkSendBufferPython2or3(x))
+				data = SSLsock.read(8092)
+				if FindNTLMNegoStep(data) == b'\x03\x00\x00\x00':
+					ParseNTLMHash(data,self.client_address[0], Challenge)
+
+		except Exception:
 			pass

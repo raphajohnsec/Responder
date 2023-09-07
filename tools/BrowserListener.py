@@ -80,14 +80,14 @@ class BrowserListener(BaseRequestHandler):
         Fprint = WorkstationFingerPrint(data[190:192])
         Roles  = ParseRoles(data[192:196])
 
-        print(text("[BROWSER] Request Type : %s" % ReqType))
-        print(text("[BROWSER] Address      : %s" % self.client_address[0]))
-        print(text("[BROWSER] Domain       : %s" % Domain))
-        print(text("[BROWSER] Name         : %s" % Name))
-        print(text("[BROWSER] Main Role    : %s" % Role1))
-        print(text("[BROWSER] 2nd Role     : %s" % Role2))
-        print(text("[BROWSER] Fingerprint  : %s" % Fprint))
-        print(text("[BROWSER] Role List    : %s" % Roles))
+        print(text(f"[BROWSER] Request Type : {ReqType}"))
+        print(text(f"[BROWSER] Address      : {self.client_address[0]}"))
+        print(text(f"[BROWSER] Domain       : {Domain}"))
+        print(text(f"[BROWSER] Name         : {Name}"))
+        print(text(f"[BROWSER] Main Role    : {Role1}"))
+        print(text(f"[BROWSER] 2nd Role     : {Role2}"))
+        print(text(f"[BROWSER] Fingerprint  : {Fprint}"))
+        print(text(f"[BROWSER] Role List    : {Roles}"))
 
         RAPThisDomain(self.client_address[0], Domain)
 
@@ -103,8 +103,10 @@ def serve_thread_udp_broadcast(host, port, handler):
     try:
         server = ThreadingUDPServer(('', port), handler)
         server.serve_forever()
-    except:
-        print("Error starting UDP server on port " + str(port) + ", check permissions or other servers running.")
+    except Exception:
+        print(
+            f"Error starting UDP server on port {str(port)}, check permissions or other servers running."
+        )
 
 if __name__ == "__main__":
     try:

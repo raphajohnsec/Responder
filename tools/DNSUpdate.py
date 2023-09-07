@@ -70,7 +70,7 @@ def new_A_record(type, serial):
 ddict1 = defaultdict(list)
 
 parser = argparse.ArgumentParser(description='Add/ Remove DNS records for an effective pawning with responder')
-    
+
 parser.add_argument("-DNS", type=str,help="IP address of the DNS server/ Domain Controller to connect to")
 parser.add_argument("-u","--user",type=str,help="Domain\\Username for authentication.")
 parser.add_argument("-p","--password",type=str,help="Password or LM:NTLM hash, will prompt if not specified")
@@ -84,20 +84,20 @@ parser.add_argument("-l", "--logfile", type=str, help="The log file of Responder
 args = parser.parse_args()
 #Checking Username and Password
 if args.user is not None:
-    if not '\\' in args.user:
+    if '\\' not in args.user:
         print('Username must include a domain, use: Domain\\username')
         sys.exit(1)
     if args.password is None:
         args.password = getpass.getpass()
 
 #Check the required arguments
-if args.action in ['ad', 'rm']:
-    if args.action == 'ad' and not args.record:
+if args.action == 'ad':
+    if not args.record:
         flag = input("No record provided, Enter 'Y' to add a Wildcard record: ")
-        if flag.lower() == 'y' or flag.lower() == 'yes':
+        if flag.lower() in ['y', 'yes']:
             recordname = "*"
         else:
-            sys.exit(1)     
+            sys.exit(1)
     else:
         recordname = args.record
     if args.action == 'ad' and not args.data:
@@ -105,6 +105,8 @@ if args.action in ['ad', 'rm']:
         sys.exit(1)
     if args.action == "rm" and not args.record:
         print("No record provided to be deleted")
+elif args.action == 'rm':
+    recordname = args.record
 elif args.action == "an":
     if args.logfile:
         with open(args.logfile) as infile:
@@ -115,7 +117,7 @@ elif args.action == "an":
                 ddict1[tempRecord].append(tempIP)
         infile.close()
         for k,v in ddict1.items():
-            print("The request %s was made by %s hosts" % (k, len(set(v))))
+            print(f"The request {k} was made by {len(set(v))} hosts")
         sys.exit(0)
     else:
         print("Provide a log file from responder session in analyze mode")
@@ -138,11 +140,11 @@ print('Bind OK')
 
 #Configure DN for the record, gather domainroot, dnsroot, zone
 domainroot = dnserver.info.other['defaultNamingContext'][0]
-dnsroot = 'CN=MicrosoftDNS,DC=DomainDnsZones,%s' % domainroot
+dnsroot = f'CN=MicrosoftDNS,DC=DomainDnsZones,{domainroot}'
 zone = re.sub(',DC=', '.', domainroot[domainroot.find('DC='):], flags=re.I)[3:]
 if recordname.lower().endswith(zone.lower()):
     recordname = recordname[:-(len(zone)+1)]
-record_dn = 'DC=%s,DC=%s,%s' % (recordname, zone, dnsroot)
+record_dn = f'DC={recordname},DC={zone},{dnsroot}'
 
 if args.action == 'ad':
     record = new_A_record(1, getserial(args.DNS, zone))
@@ -166,8 +168,12 @@ if args.action == 'ad':
 
 elif args.action == 'rm':
     #searching for the record
-    searchbase = 'DC=%s,%s' % (zone, dnsroot)
-    con.search(searchbase, '(&(objectClass=dnsNode)(name=%s))' % ldap3.utils.conv.escape_filter_chars(recordname), attributes=['dnsRecord','dNSTombstoned','name'])
+    searchbase = f'DC={zone},{dnsroot}'
+    con.search(
+        searchbase,
+        f'(&(objectClass=dnsNode)(name={ldap3.utils.conv.escape_filter_chars(recordname)}))',
+        attributes=['dnsRecord', 'dNSTombstoned', 'name'],
+    )
     if len(con.response) != 0:
         for entry in con.response:
             if entry['type'] != 'searchResEntry':

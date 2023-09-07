@@ -19,7 +19,7 @@ import optparse
 import ssl
 try:
     from SocketServer import TCPServer, UDPServer, ThreadingMixIn
-except:
+except Exception:
     from socketserver import TCPServer, UDPServer, ThreadingMixIn
 from threading import Thread
 from utils import *
@@ -80,25 +80,19 @@ class ThreadingUDPServer(ThreadingMixIn, UDPServer):
 class ThreadingTCPServer(ThreadingMixIn, TCPServer):
     def server_bind(self):
         if OsInterfaceIsSupported():
-            try:
+            with contextlib.suppress(Exception):
                 if not settings.Config.Bind_To_ALL:
                     self.socket.setsockopt(socket.SOL_SOCKET, 25, bytes(settings.Config.Interface+'\0', 'utf-8'))
                     self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
-            except Exception:
-                pass
         TCPServer.server_bind(self)
 
 class ThreadingTCPServerAuth(ThreadingMixIn, TCPServer):
     def server_bind(self):
         if OsInterfaceIsSupported():
-            try:
-                if settings.Config.Bind_To_ALL:
-                    pass
-                else:
+            with contextlib.suppress(Exception):
+                if not settings.Config.Bind_To_ALL:
                     self.socket.setsockopt(socket.SOL_SOCKET, 25, bytes(settings.Config.Interface+'\0', 'utf-8'))
                     self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
-            except Exception:
-                pass
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
         TCPServer.server_bind(self)
 
@@ -114,14 +108,10 @@ class ThreadingUDPMDNSServer(ThreadingMixIn, UDPServer):
         mreq = socket.inet_pton(socket.AF_INET6, MADDR6) + struct.pack('@I', if_nametoindex2(settings.Config.Interface))
         self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, mreq)
         if OsInterfaceIsSupported():
-            try:
-                if settings.Config.Bind_To_ALL:
-                    pass
-                else:
+            with contextlib.suppress(Exception):
+                if not settings.Config.Bind_To_ALL:
                     self.socket.setsockopt(socket.SOL_SOCKET, 25, bytes(settings.Config.Interface+'\0', 'utf-8'))
                     self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
-            except:
-                pass
         UDPServer.server_bind(self)
 
 class ThreadingUDPLLMNRServer(ThreadingMixIn, UDPServer):
@@ -129,21 +119,17 @@ class ThreadingUDPLLMNRServer(ThreadingMixIn, UDPServer):
         MADDR  = '224.0.0.252'
         MADDR6 = 'FF02:0:0:0:0:0:1:3'
         self.socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
-        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)		
+        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
         Join = self.socket.setsockopt(socket.IPPROTO_IP,socket.IP_ADD_MEMBERSHIP,socket.inet_aton(MADDR) + settings.Config.IP_aton)
 
         #IPV6:
         mreq = socket.inet_pton(socket.AF_INET6, MADDR6) + struct.pack('@I', if_nametoindex2(settings.Config.Interface))
         self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, mreq)
         if OsInterfaceIsSupported():
-            try:
-                if settings.Config.Bind_To_ALL:
-                    pass
-                else:
+            with contextlib.suppress(Exception):
+                if not settings.Config.Bind_To_ALL:
                     self.socket.setsockopt(socket.SOL_SOCKET, 25, bytes(settings.Config.Interface+'\0', 'utf-8'))
                     self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
-            except:
-                pass
         UDPServer.server_bind(self)
         
 
@@ -166,7 +152,7 @@ def serve_thread_udp_broadcast(host, port, handler):
     try:
         server = ThreadingUDPServer(('', port), handler)
         server.serve_forever()
-    except:
+    except Exception:
         print(color("[!] ", 1, 1) + "Error starting UDP server on port " + str(port) + ", check permissions or other servers running.")
 
 def serve_NBTNS_poisoner(host, port, handler):
@@ -176,84 +162,90 @@ def serve_MDNS_poisoner(host, port, handler):
     try:
         server = ThreadingUDPMDNSServer(('', port), handler)
         server.serve_forever()
-    except:
+    except Exception:
         print(color("[!] ", 1, 1) + "Error starting UDP server on port " + str(port) + ", check permissions or other servers running.")
 
 def serve_LLMNR_poisoner(host, port, handler):
     try:
         server = ThreadingUDPLLMNRServer(('', port), handler)
         server.serve_forever()
-    except:
+    except Exception:
         print(color("[!] ", 1, 1) + "Error starting UDP server on port " + str(port) + ", check permissions or other servers running.")
         
 def serve_thread_udp(host, port, handler):
     try:
-        if OsInterfaceIsSupported():
-            server = ThreadingUDPServer(('', port), handler)
-            server.serve_forever()
-        else:
-            server = ThreadingUDPServer(('', port), handler)
-            server.serve_forever()
-    except:
+        server = ThreadingUDPServer(('', port), handler)
+        server.serve_forever()
+    except Exception:
         print(color("[!] ", 1, 1) + "Error starting UDP server on port " + str(port) + ", check permissions or other servers running.")
 
 def serve_thread_tcp(host, port, handler):
     try:
-        if OsInterfaceIsSupported():
-            server = ThreadingTCPServer(('', port), handler)
-            server.serve_forever()
-        else:
-            server = ThreadingTCPServer(('', port), handler)
-            server.serve_forever()
-    except:
+        server = ThreadingTCPServer(('', port), handler)
+        server.serve_forever()
+    except Exception:
         print(color("[!] ", 1, 1) + "Error starting TCP server on port " + str(port) + ", check permissions or other servers running.")
 
 def serve_thread_tcp_auth(host, port, handler):
     try:
-        if OsInterfaceIsSupported():
-            server = ThreadingTCPServerAuth(('', port), handler)
-            server.serve_forever()
-        else:
-            server = ThreadingTCPServerAuth(('', port), handler)
-            server.serve_forever()
-    except:
+        server = ThreadingTCPServerAuth(('', port), handler)
+        server.serve_forever()
+    except Exception:
         print(color("[!] ", 1, 1) + "Error starting TCP server on port " + str(port) + ", check permissions or other servers running.")
 
 def serve_thread_SSL(host, port, handler):
     try:
-
         cert = os.path.join(settings.Config.ResponderPATH, settings.Config.SSLCert)
         key =  os.path.join(settings.Config.ResponderPATH, settings.Config.SSLKey)
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(cert, key)
         if OsInterfaceIsSupported():
             server = ThreadingTCPServer(('', port), handler)
-            server.socket = context.wrap_socket(server.socket, server_side=True)
-            server.serve_forever()
         else:
             server = ThreadingTCPServer(('', port), handler)
-            server.socket = context.wrap_socket(server.socket, server_side=True)
-            server.serve_forever()
-    except:
+        server.socket = context.wrap_socket(server.socket, server_side=True)
+        server.serve_forever()
+    except Exception:
         print(color("[!] ", 1, 1) + "Error starting SSL server on port " + str(port) + ", check permissions or other servers running.")
 
 
 def main():
+    # sourcery skip: extract-method, hoist-similar-statement-from-if, swap-nested-ifs
     if (sys.version_info < (3, 0)):
         sys.exit('This script is meant to be run with Python3')
     try:
         print(color('\n[+]', 2, 1) + " Listening for events...\n")
-            
-        threads = []
 
         # Load (M)DNS, NBNS and LLMNR Poisoners
         from poisoners.LLMNR import LLMNR
         from poisoners.NBTNS import NBTNS
         from poisoners.MDNS import MDNS
-        threads.append(Thread(target=serve_LLMNR_poisoner, args=('', 5355, LLMNR,)))
-        threads.append(Thread(target=serve_MDNS_poisoner,  args=('', 5353, MDNS,)))
-        threads.append(Thread(target=serve_NBTNS_poisoner, args=('', 137,  NBTNS,)))
-
+        threads = [
+            Thread(
+                target=serve_LLMNR_poisoner,
+                args=(
+                    '',
+                    5355,
+                    LLMNR,
+                ),
+            ),
+            Thread(
+                target=serve_MDNS_poisoner,
+                args=(
+                    '',
+                    5353,
+                    MDNS,
+                ),
+            ),
+            Thread(
+                target=serve_NBTNS_poisoner,
+                args=(
+                    '',
+                    137,
+                    NBTNS,
+                ),
+            ),
+        ]
         # Load Browser Listener
         from servers.Browser import Browser
         threads.append(Thread(target=serve_thread_udp_broadcast, args=('', 138,  Browser,)))
@@ -280,9 +272,26 @@ def main():
 
         if settings.Config.DCERPC_On_Off:
             from servers.RPC import RPCMap, RPCMapper
-            threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 135, RPCMap,)))
-            threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, settings.Config.RPCPort, RPCMapper,)))
-
+            threads.extend(
+                (
+                    Thread(
+                        target=serve_thread_tcp,
+                        args=(
+                            settings.Config.Bind_To,
+                            135,
+                            RPCMap,
+                        ),
+                    ),
+                    Thread(
+                        target=serve_thread_tcp,
+                        args=(
+                            settings.Config.Bind_To,
+                            settings.Config.RPCPort,
+                            RPCMapper,
+                        ),
+                    ),
+                )
+            )
         if settings.Config.WPAD_On_Off:
             from servers.HTTP_Proxy import HTTP_Proxy
             threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 3141, HTTP_Proxy,)))
@@ -294,23 +303,92 @@ def main():
         if settings.Config.SMB_On_Off:
             if settings.Config.LM_On_Off:
                 from servers.SMB import SMB1LM
-                threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 445, SMB1LM,)))
-                threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 139, SMB1LM,)))
+                threads.extend(
+                    (
+                        Thread(
+                            target=serve_thread_tcp,
+                            args=(
+                                settings.Config.Bind_To,
+                                445,
+                                SMB1LM,
+                            ),
+                        ),
+                        Thread(
+                            target=serve_thread_tcp,
+                            args=(
+                                settings.Config.Bind_To,
+                                139,
+                                SMB1LM,
+                            ),
+                        ),
+                    )
+                )
             else:
                 from servers.SMB import SMB1
-                threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 445, SMB1,)))
-                threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 139, SMB1,)))
-
+                threads.extend(
+                    (
+                        Thread(
+                            target=serve_thread_tcp,
+                            args=(
+                                settings.Config.Bind_To,
+                                445,
+                                SMB1,
+                            ),
+                        ),
+                        Thread(
+                            target=serve_thread_tcp,
+                            args=(
+                                settings.Config.Bind_To,
+                                139,
+                                SMB1,
+                            ),
+                        ),
+                    )
+                )
         if settings.Config.Krb_On_Off:
             from servers.Kerberos import KerbTCP, KerbUDP
-            threads.append(Thread(target=serve_thread_udp, args=('', 88, KerbUDP,)))
-            threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 88, KerbTCP,)))
-
+            threads.extend(
+                (
+                    Thread(
+                        target=serve_thread_udp,
+                        args=(
+                            '',
+                            88,
+                            KerbUDP,
+                        ),
+                    ),
+                    Thread(
+                        target=serve_thread_tcp,
+                        args=(
+                            settings.Config.Bind_To,
+                            88,
+                            KerbTCP,
+                        ),
+                    ),
+                )
+            )
         if settings.Config.SQL_On_Off:
             from servers.MSSQL import MSSQL, MSSQLBrowser
-            threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 1433, MSSQL,)))
-            threads.append(Thread(target=serve_thread_udp_broadcast, args=(settings.Config.Bind_To, 1434, MSSQLBrowser,)))
-
+            threads.extend(
+                (
+                    Thread(
+                        target=serve_thread_tcp,
+                        args=(
+                            settings.Config.Bind_To,
+                            1433,
+                            MSSQL,
+                        ),
+                    ),
+                    Thread(
+                        target=serve_thread_udp_broadcast,
+                        args=(
+                            settings.Config.Bind_To,
+                            1434,
+                            MSSQLBrowser,
+                        ),
+                    ),
+                )
+            )
         if settings.Config.FTP_On_Off:
             from servers.FTP import FTP
             threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 21, FTP,)))
@@ -321,27 +399,78 @@ def main():
 
         if settings.Config.LDAP_On_Off:
             from servers.LDAP import LDAP, CLDAP
-            threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 389, LDAP,)))
-            threads.append(Thread(target=serve_thread_udp, args=('', 389, CLDAP,)))
-
+            threads.extend(
+                (
+                    Thread(
+                        target=serve_thread_tcp,
+                        args=(
+                            settings.Config.Bind_To,
+                            389,
+                            LDAP,
+                        ),
+                    ),
+                    Thread(
+                        target=serve_thread_udp,
+                        args=(
+                            '',
+                            389,
+                            CLDAP,
+                        ),
+                    ),
+                )
+            )
         if settings.Config.MQTT_On_Off:
             from servers.MQTT import MQTT
             threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 1883, MQTT,)))
 
         if settings.Config.SMTP_On_Off:
             from servers.SMTP import ESMTP
-            threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 25,  ESMTP,)))
-            threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 587, ESMTP,)))
-
+            threads.extend(
+                (
+                    Thread(
+                        target=serve_thread_tcp,
+                        args=(
+                            settings.Config.Bind_To,
+                            25,
+                            ESMTP,
+                        ),
+                    ),
+                    Thread(
+                        target=serve_thread_tcp,
+                        args=(
+                            settings.Config.Bind_To,
+                            587,
+                            ESMTP,
+                        ),
+                    ),
+                )
+            )
         if settings.Config.IMAP_On_Off:
             from servers.IMAP import IMAP
             threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 143, IMAP,)))
 
         if settings.Config.DNS_On_Off:
             from servers.DNS import DNS, DNSTCP
-            threads.append(Thread(target=serve_thread_udp, args=('', 53, DNS,)))
-            threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 53, DNSTCP,)))
-
+            threads.extend(
+                (
+                    Thread(
+                        target=serve_thread_udp,
+                        args=(
+                            '',
+                            53,
+                            DNS,
+                        ),
+                    ),
+                    Thread(
+                        target=serve_thread_tcp,
+                        args=(
+                            settings.Config.Bind_To,
+                            53,
+                            DNSTCP,
+                        ),
+                    ),
+                )
+            )
         if settings.Config.SNMP_On_Off:
             from servers.SNMP import SNMP
             threads.append(Thread(target=serve_thread_udp, args=('', 161, SNMP,)))
@@ -354,7 +483,7 @@ def main():
             print(color('[+] Responder is in analyze mode. No NBT-NS, LLMNR, MDNS requests will be poisoned.', 3, 1))
         if settings.Config.Quiet_Mode:
             print(color('[+] Responder is in quiet mode. No NBT-NS, LLMNR, MDNS messages will print to screen.', 3, 1))
-            
+
 
         if settings.Config.DHCP_On_Off:
             from poisoners.DHCP import DHCP

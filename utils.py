@@ -27,28 +27,28 @@ import struct
 import random
 try:
     import netifaces
-except:
+except Exception:
     sys.exit('You need to install python-netifaces or run Responder with python3...\nTry "apt-get install python-netifaces" or "pip install netifaces"')
-    
+
 from calendar import timegm
 
 def if_nametoindex2(name):
     return socket.if_nametoindex(settings.Config.Interface)
             
 def RandomChallenge():
-    if settings.Config.NumChal == "random":
-        from random import getrandbits
-        NumChal = b'%016x' % getrandbits(16 * 4)
-        Challenge = b''
-        for i in range(0, len(NumChal),2):
-            Challenge += NumChal[i:i+2]
-        return codecs.decode(Challenge, 'hex')
-    else:
+    if settings.Config.NumChal != "random":
         return settings.Config.Challenge
+    from random import getrandbits
+    NumChal = b'%016x' % getrandbits(16 * 4)
+    Challenge = b''
+    for i in range(0, len(NumChal),2):
+        Challenge += NumChal[i:i+2]
+    return codecs.decode(Challenge, 'hex')
 
 def HTTPCurrentDate():
-    Date = datetime.datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT')
-    return Date
+    return datetime.datetime.now(datetime.timezone.utc).strftime(
+        '%a, %d %b %Y %H:%M:%S GMT'
+    )
 
 def SMBTime():
     dt = datetime.datetime.now()
@@ -57,7 +57,7 @@ def SMBTime():
 
 try:
     import sqlite3
-except:
+except Exception:
     print("[!] Please install python-sqlite3 extension.")
     sys.exit(0)
 
@@ -91,7 +91,10 @@ def RespondToThisIP(ClientIp):
     if ClientIp.startswith('127.0.0.'):
         return False
     elif settings.Config.AutoIgnore and ClientIp in settings.Config.AutoIgnoreList:
-        print(color('[*]', 3, 1), 'Received request from auto-ignored client %s, not answering.' % ClientIp)
+        print(
+            color('[*]', 3, 1),
+            f'Received request from auto-ignored client {ClientIp}, not answering.',
+        )
         return False
     elif settings.Config.RespondTo and ClientIp not in settings.Config.RespondTo:
         return False
@@ -137,22 +140,16 @@ def RespondWithIP6():
 
 
 def OsInterfaceIsSupported():
-    if settings.Config.Interface != "Not set":
-        return not IsOsX()
-    return False
+    return not IsOsX() if settings.Config.Interface != "Not set" else False
 
 def IsOsX():
     return sys.platform == "darwin"
 
 def IsIPv6IP(IP):
-    if IP == None:
+    if IP is None:
         return False
     regex = "(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
-    ret  = re.search(regex, IP)
-    if ret:
-        return True
-    else:
-        return False	
+    return bool(ret := re.search(regex, IP))	
     
 def FindLocalIP(Iface, OURIP):
     if Iface == 'ALL':
@@ -161,7 +158,7 @@ def FindLocalIP(Iface, OURIP):
     try:
         if IsOsX():
             return OURIP
-            
+
         elif IsIPv6IP(OURIP):	
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.setsockopt(socket.SOL_SOCKET, 25, str(Iface+'\0').encode('utf-8'))
@@ -170,20 +167,20 @@ def FindLocalIP(Iface, OURIP):
             s.close()
             return ret
 
-            
+
         elif IsIPv6IP(OURIP) == False and OURIP != None:
             return OURIP
-        
-        elif OURIP == None:
+
+        elif OURIP is None:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.setsockopt(socket.SOL_SOCKET, 25, str(Iface+'\0').encode('utf-8'))
             s.connect(("127.0.0.1",9))#RFC 863
             ret = s.getsockname()[0]
             s.close()
             return ret
-            
+
     except socket.error:
-        print(color("[!] Error: %s: Interface not found" % Iface, 1))
+        print(color(f"[!] Error: {Iface}: Interface not found", 1))
         sys.exit(-1)
 
 
@@ -193,36 +190,36 @@ def FindLocalIP6(Iface, OURIP):
 
     try:
 
-        if IsIPv6IP(OURIP) == False:
-            
-            try:
-                #Let's make it random so we don't get spotted easily.
-                randIP = "2001:" + ":".join(("%x" % random.randint(0, 16**4) for i in range(7)))
-                s = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
-                s.connect((randIP+':80', 1))
-                IP = s.getsockname()[0]
-                print('IP is: %s'%IP)
-                return IP
-            except:
-                try:
-                    #Try harder; Let's get the local link addr
-                    IP = str(netifaces.ifaddresses(Iface)[netifaces.AF_INET6][0]["addr"].replace("%"+Iface, ""))
-                    return IP
-                except:
-                    IP = '::1'
-                    print("[+] You don't have an IPv6 address assigned.")
-                    return IP
-
-        else:
+        if IsIPv6IP(OURIP) != False:
             return OURIP
-        
+
+        try:
+                #Let's make it random so we don't get spotted easily.
+            randIP = "2001:" + ":".join("%x" % random.randint(0, 16**4) for _ in range(7))
+            s = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+            s.connect((f'{randIP}:80', 1))
+            IP = s.getsockname()[0]
+            print(f'IP is: {IP}')
+            return IP
+        except Exception:
+            try:
+                    #Try harder; Let's get the local link addr
+                IP = str(
+                    netifaces.ifaddresses(Iface)[netifaces.AF_INET6][0][
+                        "addr"
+                    ].replace(f"%{Iface}", "")
+                )
+                return IP
+            except Exception:
+                print("[+] You don't have an IPv6 address assigned.")
+                return '::1'
     except socket.error:
-        print(color("[!] Error: %s: Interface not found" % Iface, 1))
+        print(color(f"[!] Error: {Iface}: Interface not found", 1))
         sys.exit(-1)
         
 # Function used to write captured hashs to a file.
 def WriteData(outfile, data, user):
-    logging.info("[*] Captured Hash: %s" % data)
+    logging.info(f"[*] Captured Hash: {data}")
     if not os.path.isfile(outfile):
         with open(outfile,"w") as outf:
             outf.write(data + '\n')
@@ -266,22 +263,22 @@ def CreateResponderDb():
 def SaveToDb(result):
 
     for k in [ 'module', 'type', 'client', 'hostname', 'user', 'cleartext', 'hash', 'fullhash' ]:
-        if not k in result:
+        if k not in result:
             result[k] = ''
     result['client'] = result['client'].replace("::ffff:","")
     if len(result['user']) < 2:
-        print(color('[*] Skipping one character username: %s' % result['user'], 3, 1))
-        text("[*] Skipping one character username: %s" % result['user'])
+        print(color(f"[*] Skipping one character username: {result['user']}", 3, 1))
+        text(f"[*] Skipping one character username: {result['user']}")
         return
 
     cursor = sqlite3.connect(settings.Config.DatabaseFile)
     cursor.text_factory = sqlite3.Binary  # We add a text factory to support different charsets
-    
+
     if len(result['cleartext']):
-        fname = '%s-%s-ClearText-%s.txt' % (result['module'], result['type'], result['client'])
+        fname = f"{result['module']}-{result['type']}-ClearText-{result['client']}.txt"
         res = cursor.execute("SELECT COUNT(*) AS count FROM responder WHERE module=? AND type=? AND client=? AND LOWER(user)=LOWER(?) AND cleartext=?", (result['module'], result['type'], result['client'], result['user'], result['cleartext']))
     else:
-        fname = '%s-%s-%s.txt' % (result['module'], result['type'], result['client'])
+        fname = f"{result['module']}-{result['type']}-{result['client']}.txt"
         res = cursor.execute("SELECT COUNT(*) AS count FROM responder WHERE module=? AND type=? AND client=? AND LOWER(user)=LOWER(?)", (result['module'], result['type'], result['client'], result['user']))
 
     (count,) = res.fetchone()
@@ -300,35 +297,73 @@ def SaveToDb(result):
 
     if not count or settings.Config.Verbose:  # Print output
         if len(result['client']):
-            print(text("[%s] %s Client   : %s" % (result['module'], result['type'], color(result['client'], 3))))
+            print(
+                text(
+                    f"[{result['module']}] {result['type']} Client   : {color(result['client'], 3)}"
+                )
+            )
 
         if len(result['hostname']):
-            print(text("[%s] %s Hostname : %s" % (result['module'], result['type'], color(result['hostname'], 3))))
+            print(
+                text(
+                    f"[{result['module']}] {result['type']} Hostname : {color(result['hostname'], 3)}"
+                )
+            )
 
         if len(result['user']):
-            print(text("[%s] %s Username : %s" % (result['module'], result['type'], color(result['user'], 3))))
+            print(
+                text(
+                    f"[{result['module']}] {result['type']} Username : {color(result['user'], 3)}"
+                )
+            )
 
         # Bu order of priority, print cleartext, fullhash, or hash
         if len(result['cleartext']):
-            print(text("[%s] %s Password : %s" % (result['module'], result['type'], color(result['cleartext'], 3))))
+            print(
+                text(
+                    f"[{result['module']}] {result['type']} Password : {color(result['cleartext'], 3)}"
+                )
+            )
 
         elif len(result['fullhash']):
-            print(text("[%s] %s Hash     : %s" % (result['module'], result['type'], color(result['fullhash'], 3))))
+            print(
+                text(
+                    f"[{result['module']}] {result['type']} Hash     : {color(result['fullhash'], 3)}"
+                )
+            )
 
         elif len(result['hash']):
-            print(text("[%s] %s Hash     : %s" % (result['module'], result['type'], color(result['hash'], 3))))
+            print(
+                text(
+                    f"[{result['module']}] {result['type']} Hash     : {color(result['hash'], 3)}"
+                )
+            )
 
         # Appending auto-ignore list if required
         # Except if this is a machine account's hash
         if settings.Config.AutoIgnore and not result['user'].endswith('$'):
             settings.Config.AutoIgnoreList.append(result['client'])
-            print(color('[*] Adding client %s to auto-ignore list' % result['client'], 4, 1))
+            print(color(f"[*] Adding client {result['client']} to auto-ignore list", 4, 1))
     elif len(result['cleartext']):
-        print(color('[*] Skipping previously captured cleartext password for %s' % result['user'], 3, 1))
-        text('[*] Skipping previously captured cleartext password for %s' % result['user'])
+        print(
+            color(
+                f"[*] Skipping previously captured cleartext password for {result['user']}",
+                3,
+                1,
+            )
+        )
+        text(
+            f"[*] Skipping previously captured cleartext password for {result['user']}"
+        )
     else:
-        print(color('[*] Skipping previously captured hash for %s' % result['user'], 3, 1))
-        text('[*] Skipping previously captured hash for %s' % result['user'])
+        print(
+            color(
+                f"[*] Skipping previously captured hash for {result['user']}",
+                3,
+                1,
+            )
+        )
+        text(f"[*] Skipping previously captured hash for {result['user']}")
         cursor.execute("UPDATE responder SET timestamp=datetime('now') WHERE user=? AND client=?", (result['user'], result['client']))
         cursor.commit()
     cursor.close()
@@ -336,14 +371,14 @@ def SaveToDb(result):
 def SavePoisonersToDb(result):
 
     for k in [ 'Poisoner', 'SentToIp', 'ForName', 'AnalyzeMode' ]:
-        if not k in result:
+        if k not in result:
             result[k] = ''
     result['SentToIp'] = result['SentToIp'].replace("::ffff:","")
     cursor = sqlite3.connect(settings.Config.DatabaseFile)
     cursor.text_factory = sqlite3.Binary  # We add a text factory to support different charsets
     res = cursor.execute("SELECT COUNT(*) AS count FROM Poisoned WHERE Poisoner=? AND SentToIp=? AND ForName=? AND AnalyzeMode=?", (result['Poisoner'], result['SentToIp'], result['ForName'], result['AnalyzeMode']))
     (count,) = res.fetchone()
-        
+
     if not count:
         cursor.execute("INSERT INTO Poisoned VALUES(datetime('now'), ?, ?, ?, ?)", (result['Poisoner'], result['SentToIp'], result['ForName'], result['AnalyzeMode']))
         cursor.commit()
@@ -352,14 +387,14 @@ def SavePoisonersToDb(result):
 
 def SaveDHCPToDb(result):
     for k in [ 'MAC', 'IP', 'RequestedIP']:
-        if not k in result:
+        if k not in result:
             result[k] = ''
 
     cursor = sqlite3.connect(settings.Config.DatabaseFile)
     cursor.text_factory = sqlite3.Binary  # We add a text factory to support different charsets
     res = cursor.execute("SELECT COUNT(*) AS count FROM DHCP WHERE MAC=? AND IP=? AND RequestedIP=?", (result['MAC'], result['IP'], result['RequestedIP']))
     (count,) = res.fetchone()
-        
+
     if not count:
         cursor.execute("INSERT INTO DHCP VALUES(datetime('now'), ?, ?, ?)", (result['MAC'], result['IP'], result['RequestedIP']))
         cursor.commit()
@@ -367,19 +402,16 @@ def SaveDHCPToDb(result):
     cursor.close()
     
 def Parse_IPV6_Addr(data):
-    if data[len(data)-4:len(data)] == b'\x00\x1c\x00\x01':
+    if data[len(data) - 4 :] == b'\x00\x1c\x00\x01':
         return 'IPv6'
-    elif data[len(data)-4:len(data)] == b'\x00\x01\x00\x01':
+    elif data[len(data) - 4 :] == b'\x00\x01\x00\x01':
         return True
-    elif data[len(data)-4:len(data)] == b'\x00\xff\x00\x01':
+    elif data[len(data) - 4 :] == b'\x00\xff\x00\x01':
         return True
     return False
 
 def IsIPv6(data):
-    if "::ffff:" in data:
-        return False
-    else:
-        return True
+    return "::ffff:" not in data
     
 def Decode_Name(nbname):  #From http://code.google.com/p/dpkt/ with author's permission.
     try:
@@ -387,13 +419,16 @@ def Decode_Name(nbname):  #From http://code.google.com/p/dpkt/ with author's per
 
         if len(nbname) != 32:
             return nbname
-        
-        l = []
-        for i in range(0, 32, 2):
-            l.append(chr(((ord(nbname[i]) - 0x41) << 4) | ((ord(nbname[i+1]) - 0x41) & 0xf)))
-        
+
+        l = [
+            chr(
+                ((ord(nbname[i]) - 0x41) << 4)
+                | ((ord(nbname[i + 1]) - 0x41) & 0xF)
+            )
+            for i in range(0, 32, 2)
+        ]
         return ''.join(list(filter(lambda x: x in printable, ''.join(l).split('\x00', 1)[0].replace(' ', ''))))
-    except:
+    except Exception:
         return "Illegal NetBIOS name"
 
 
@@ -431,7 +466,7 @@ def banner():
 
 
 def StartupMessage():
-    enabled  = color('[ON]', 2, 1) 
+    enabled  = color('[ON]', 2, 1)
     disabled = color('[OFF]', 1, 1)
 
     print('')
@@ -481,17 +516,38 @@ def StartupMessage():
     print('')
 
     print(color("[+] ", 2, 1) + "Generic Options:")
-    print('    %-27s' % "Responder NIC" + color('[%s]' % settings.Config.Interface, 5, 1))
-    print('    %-27s' % "Responder IP" + color('[%s]' % settings.Config.Bind_To, 5, 1))
-    print('    %-27s' % "Responder IPv6" + color('[%s]' % settings.Config.Bind_To6, 5, 1))
+    print(
+        '    %-27s' % "Responder NIC"
+        + color(f'[{settings.Config.Interface}]', 5, 1)
+    )
+    print(
+        '    %-27s' % "Responder IP"
+        + color(f'[{settings.Config.Bind_To}]', 5, 1)
+    )
+    print(
+        '    %-27s' % "Responder IPv6"
+        + color(f'[{settings.Config.Bind_To6}]', 5, 1)
+    )
     if settings.Config.ExternalIP:
-        print('    %-27s' % "Responder external IP" + color('[%s]' % settings.Config.ExternalIP, 5, 1))
+        print(
+            '    %-27s' % "Responder external IP"
+            + color(f'[{settings.Config.ExternalIP}]', 5, 1)
+        )
     if settings.Config.ExternalIP6:
-        print('    %-27s' % "Responder external IPv6" + color('[%s]' % settings.Config.ExternalIP6, 5, 1))
-        
-    print('    %-27s' % "Challenge set" + color('[%s]' % settings.Config.NumChal, 5, 1))
+        print(
+            '    %-27s' % "Responder external IPv6"
+            + color(f'[{settings.Config.ExternalIP6}]', 5, 1)
+        )
+
+    print(
+        '    %-27s' % "Challenge set"
+        + color(f'[{settings.Config.NumChal}]', 5, 1)
+    )
     if settings.Config.Upstream_Proxy:
-        print('    %-27s' % "Upstream Proxy" + color('[%s]' % settings.Config.Upstream_Proxy, 5, 1))
+        print(
+            '    %-27s' % "Upstream Proxy"
+            + color(f'[{settings.Config.Upstream_Proxy}]', 5, 1)
+        )
 
     if len(settings.Config.RespondTo):
         print('    %-27s' % "Respond To" + color(str(settings.Config.RespondTo), 5, 1))
@@ -504,7 +560,16 @@ def StartupMessage():
     print('')
 
     print(color("[+] ", 2, 1) + "Current Session Variables:")
-    print('    %-27s' % "Responder Machine Name" + color('[%s]' % settings.Config.MachineName, 5, 1))
-    print('    %-27s' % "Responder Domain Name" + color('[%s]' % settings.Config.DomainName, 5, 1))
-    print('    %-27s' % "Responder DCE-RPC Port " + color('[%s]' % settings.Config.RPCPort, 5, 1))
+    print(
+        '    %-27s' % "Responder Machine Name"
+        + color(f'[{settings.Config.MachineName}]', 5, 1)
+    )
+    print(
+        '    %-27s' % "Responder Domain Name"
+        + color(f'[{settings.Config.DomainName}]', 5, 1)
+    )
+    print(
+        '    %-27s' % "Responder DCE-RPC Port "
+        + color(f'[{settings.Config.RPCPort}]', 5, 1)
+    )
 

@@ -30,7 +30,7 @@ def ParseHTTPHash(data, Challenge, client, module):
 	LMhashOffset = struct.unpack('<H',data[16:18])[0]
 	LMHash       = data[LMhashOffset:LMhashOffset+LMhashLen]
 	LMHashFinal  = codecs.encode(LMHash, 'hex').upper().decode('latin-1')
-	
+
 	NthashLen    = struct.unpack('<H',data[20:22])[0]
 	NthashOffset = struct.unpack('<H',data[24:26])[0]
 	NTHash       = data[NthashOffset:NthashOffset+NthashLen]
@@ -43,16 +43,18 @@ def ParseHTTPHash(data, Challenge, client, module):
 		HostNameLen     = struct.unpack('<H',data[46:48])[0]
 		HostNameOffset  = struct.unpack('<H',data[48:50])[0]
 		HostName        = data[HostNameOffset:HostNameOffset+HostNameLen].decode('latin-1').replace('\x00','')
-		WriteHash       = '%s::%s:%s:%s:%s' % (User, HostName, LMHashFinal, NTHashFinal, Challenge1)
-		SaveToDb({
-			'module': module, 
-			'type': 'NTLMv1', 
-			'client': client, 
-			'host': HostName, 
-			'user': User, 
-			'hash': LMHashFinal+':'+NTHashFinal, 
-			'fullhash': WriteHash,
-		})
+		WriteHash = f'{User}::{HostName}:{LMHashFinal}:{NTHashFinal}:{Challenge1}'
+		SaveToDb(
+			{
+				'module': module,
+				'type': 'NTLMv1',
+				'client': client,
+				'host': HostName,
+				'user': User,
+				'hash': f'{LMHashFinal}:{NTHashFinal}',
+				'fullhash': WriteHash,
+			}
+		)
 
 	if NthashLen > 24:
 		NthashLen      = 64
@@ -62,16 +64,20 @@ def ParseHTTPHash(data, Challenge, client, module):
 		HostNameLen    = struct.unpack('<H',data[44:46])[0]
 		HostNameOffset = struct.unpack('<H',data[48:50])[0]
 		HostName       = data[HostNameOffset:HostNameOffset+HostNameLen].decode('latin-1').replace('\x00','')
-		WriteHash      = '%s::%s:%s:%s:%s' % (User, Domain, Challenge1, NTHashFinal[:32], NTHashFinal[32:])
-		SaveToDb({
-			'module': module, 
-			'type': 'NTLMv2', 
-			'client': client, 
-			'host': HostName, 
-			'user': Domain + '\\' + User,
-			'hash': NTHashFinal[:32] + ':' + NTHashFinal[32:],
-			'fullhash': WriteHash,
-		})
+		WriteHash = (
+			f'{User}::{Domain}:{Challenge1}:{NTHashFinal[:32]}:{NTHashFinal[32:]}'
+		)
+		SaveToDb(
+			{
+				'module': module,
+				'type': 'NTLMv2',
+				'client': client,
+				'host': HostName,
+				'user': Domain + '\\' + User,
+				'hash': f'{NTHashFinal[:32]}:{NTHashFinal[32:]}',
+				'fullhash': WriteHash,
+			}
+		)
 
 # Handle HTTP packet sequence.
 def PacketSequence(data, client, Challenge):
@@ -89,12 +95,17 @@ def PacketSequence(data, client, Challenge):
 			Buffer = NTLM_Challenge(NegoFlags="\x35\x82\x89\xe2", ServerChallenge=NetworkRecvBufferPython2or3(Challenge))
 			Buffer.calculate()
 			if NTLM_Auth2:
-				Buffer_Ans = WinRM_NTLM_Challenge_Ans(Payload = b64encode(NetworkSendBufferPython2or3(Buffer)).decode('latin-1'))
-				return Buffer_Ans
+				return WinRM_NTLM_Challenge_Ans(
+					Payload=b64encode(NetworkSendBufferPython2or3(Buffer)).decode(
+						'latin-1'
+					)
+				)
 			else:
-				Buffer_Ans = IIS_NTLM_Challenge_Ans(Payload = b64encode(NetworkSendBufferPython2or3(Buffer)).decode('latin-1'))
-				return Buffer_Ans
-
+				return IIS_NTLM_Challenge_Ans(
+					Payload=b64encode(NetworkSendBufferPython2or3(Buffer)).decode(
+						'latin-1'
+					)
+				)
 		if Packet_NTLM == b'\x03':
 			if NTLM_Auth2:
 				NTLM_Auth = b64decode(''.join(NTLM_Auth2))
@@ -124,12 +135,20 @@ def PacketSequence(data, client, Challenge):
 		if settings.Config.Basic:
 			Response = IIS_Basic_401_Ans()
 			if settings.Config.Verbose:
-				print(text("[WinRM] Sending BASIC authentication request to %s" % client.replace("::ffff:","")))
+				print(
+					text(
+						f'[WinRM] Sending BASIC authentication request to {client.replace("::ffff:", "")}'
+					)
+				)
 
 		else:
 			Response = IIS_Auth_401_Ans()
 			if settings.Config.Verbose:
-				print(text("[WinRM] Sending NTLM authentication request to %s" % client.replace("::ffff:","")))
+				print(
+					text(
+						f'[WinRM] Sending NTLM authentication request to {client.replace("::ffff:", "")}'
+					)
+				)
 
 		return Response
 
@@ -152,26 +171,22 @@ class WinRM(BaseRequestHandler):
 					remaining -= len(buff)
 					#check if we recieved the full header
 					if data.find('\r\n\r\n') != -1: 
-						#we did, now to check if there was anything else in the request besides the header
 						if data.find('Content-Length') == -1:
 							#request contains only header
 							break
-						else:
-							#searching for that content-length field in the header
-							for line in data.split('\r\n'):
-								if line.find('Content-Length') != -1:
-									line = line.strip()
-									remaining = int(line.split(':')[1].strip()) - len(data)
+						#searching for that content-length field in the header
+						for line in data.split('\r\n'):
+							if line.find('Content-Length') != -1:
+								line = line.strip()
+								remaining = int(line.split(':')[1].strip()) - len(data)
 					if remaining <= 0:
 						break
 				if data == "":
 					break
 
-				else:
-					Buffer = PacketSequence(data,self.client_address[0], Challenge)
-					self.request.send(NetworkSendBufferPython2or3(Buffer))
-		
+				Buffer = PacketSequence(data,self.client_address[0], Challenge)
+				self.request.send(NetworkSendBufferPython2or3(Buffer))
+
 		except:
 			raise
-			pass
 			

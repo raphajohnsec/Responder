@@ -28,11 +28,10 @@ try:
         data, address = s.recvfrom(8092)
         if not data:
             break
-        else:
-            print("===============================================================")
-            print(("Host details: %s"%(address[0])))
-            print((data[2:]).decode('latin-1'))
-            print("===============================================================")
-            print("")
-except:
+        print("===============================================================")
+        print(f"Host details: {address[0]}")
+        print((data[2:]).decode('latin-1'))
+        print("===============================================================")
+        print("")
+except Exception:
     pass

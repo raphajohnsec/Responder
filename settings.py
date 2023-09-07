@@ -39,13 +39,13 @@ class Settings:
 		return str.upper() == 'ON'
 
 	def ExpandIPRanges(self):
-		def expand_ranges(lst):	
+		def expand_ranges(lst):
 			ret = []
 			for l in lst:
 				if ':' in l: #For IPv6 addresses, similar to the IPv4 version below but hex and pads :'s to expand shortend addresses 
 					while l.count(':') < 7: 
 						pos = l.find('::')
-						l = l[:pos] + ':' + l[pos:]
+						l = f'{l[:pos]}:{l[pos:]}'
 					tab = l.split(':')
 					x = {}
 					i = 0
@@ -96,18 +96,18 @@ class Settings:
 
 	def populate(self, options):
 
-		if options.Interface == None and utils.IsOsX() == False:
+		if options.Interface is None and utils.IsOsX() == False:
 			print(utils.color("Error: -I <if> mandatory option is missing", 1))
 			sys.exit(-1)
 
-		if options.Interface == "ALL" and options.OURIP == None:
+		if options.Interface == "ALL" and options.OURIP is None:
 			print(utils.color("Error: -i is missing.\nWhen using -I ALL you need to provide your current ip address", 1))
 			sys.exit(-1)
 
 		# Config parsing
 		config = ConfigParser.ConfigParser()
 		config.read(os.path.join(self.ResponderPATH, 'Responder.conf'))
-		
+
 		# Servers
 		self.HTTP_On_Off     = self.toBool(config.get('Responder Core', 'HTTP'))
 		self.SSL_On_Off      = self.toBool(config.get('Responder Core', 'HTTPS'))
@@ -163,12 +163,9 @@ class Settings:
 
 		if self.Interface == "ALL":
 			self.Bind_To_ALL  = True
-		else:
-			self.Bind_To_ALL  = False
-		#IPV4
-		if self.Interface == "ALL":
 			self.IP_aton   = socket.inet_aton(self.OURIP)
 		else:
+			self.Bind_To_ALL  = False
 			self.IP_aton   = socket.inet_aton(self.Bind_To)
 		#IPV6
 		if self.Interface == "ALL":
@@ -176,7 +173,7 @@ class Settings:
 				self.IP_Pton6   = socket.inet_pton(socket.AF_INET6, self.OURIP)
 		else:
 			self.IP_Pton6   = socket.inet_pton(socket.AF_INET6, self.Bind_To6)
-		
+
 		#External IP
 		if self.ExternalIP:
 			if utils.IsIPv6IP(self.ExternalIP):
@@ -186,7 +183,7 @@ class Settings:
 			self.ExternalResponderIP = utils.RespondWithIP()
 		else:
 			self.ExternalResponderIP = self.Bind_To
-			
+
 		#External IPv6
 		if self.ExternalIP6:
 			self.ExternalIP6Pton = socket.inet_pton(socket.AF_INET6, self.ExternalIP6)
@@ -229,7 +226,7 @@ class Settings:
 		self.HtmlToInject     = config.get('HTTP Server', 'HtmlToInject')
 
 		if len(self.HtmlToInject) == 0:
-			self.HtmlToInject = "<img src='file://///"+self.Bind_To+"/pictures/logo.jpg' alt='Loading' height='1' width='1'>"
+			self.HtmlToInject = f"<img src='file://///{self.Bind_To}/pictures/logo.jpg' alt='Loading' height='1' width='1'>"
 
 		if len(self.WPAD_Script) == 0:
 			self.WPAD_Script = 'function FindProxyForURL(url, host){if ((host == "localhost") || shExpMatch(host, "localhost.*") ||(host == "127.0.0.1") || isPlainHostName(host)) return "DIRECT"; return "PROXY '+self.Bind_To+':3128; PROXY '+self.Bind_To+':3141; DIRECT";}'
@@ -254,12 +251,29 @@ class Settings:
 		self.MDNSTLD           = ['.LOCAL']
 		self.DontRespondToName = [x+y for x in self.DontRespondToName_ for y in ['']+self.MDNSTLD]
 		#Generate Random stuff for one Responder session
-		self.MachineName       = 'WIN-'+''.join([random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for i in range(11)])
-		self.Username            = ''.join([random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ') for i in range(6)])
-		self.Domain            = ''.join([random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for i in range(4)])
-		self.DHCPHostname      = ''.join([random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for i in range(9)])
-		self.DomainName        = self.Domain + '.LOCAL'
-		self.MachineNego       = ''.join([random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for i in range(9)]) +'$@'+self.DomainName
+		self.MachineName = 'WIN-' + ''.join(
+			[random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(11)]
+		)
+		self.Username = ''.join(
+			[random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ') for _ in range(6)]
+		)
+		self.Domain = ''.join(
+			[random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(4)]
+		)
+		self.DHCPHostname = ''.join(
+			[random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(9)]
+		)
+		self.DomainName = f'{self.Domain}.LOCAL'
+		self.MachineNego = (
+			''.join(
+				[
+					random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+					for _ in range(9)
+				]
+			)
+			+ '$@'
+			+ self.DomainName
+		)
 		self.RPCPort           = random.randrange(45000, 49999)
 		# Auto Ignore List
 		self.AutoIgnore                       = self.toBool(config.get('Responder Core', 'AutoIgnoreAfterSuccess'))
@@ -277,15 +291,13 @@ class Settings:
 			sys.exit(-1)
 
 		self.Challenge = b''
-		if self.NumChal.lower() == 'random':
-			pass
-		else:
+		if self.NumChal.lower() != 'random':
 			self.Challenge = bytes.fromhex(self.NumChal)
 
 
 		# Set up logging
 		logging.basicConfig(filename=self.SessionLogFile, level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-		logging.warning('Responder Started: %s' % self.CommandLine)
+		logging.warning(f'Responder Started: {self.CommandLine}')
 
 		Formatter = logging.Formatter('%(asctime)s - %(message)s')
 		PLog_Handler = logging.FileHandler(self.PoisonersLogFile, 'w')
@@ -300,43 +312,38 @@ class Settings:
 
 		self.AnalyzeLogger = logging.getLogger('Analyze Log')
 		self.AnalyzeLogger.addHandler(ALog_Handler)
-		
+
 		# First time Responder run?
-		if os.path.isfile(self.ResponderPATH+'/Responder.db'):
-			pass
-		else:
+		if not os.path.isfile(f'{self.ResponderPATH}/Responder.db'):
 			#If it's the first time, generate SSL certs for this Responder session and send openssl output to /dev/null
-			Certs = os.system(self.ResponderPATH+"/certs/gen-self-signed-cert.sh >/dev/null 2>&1")
-		
+			Certs = os.system(
+				f"{self.ResponderPATH}/certs/gen-self-signed-cert.sh >/dev/null 2>&1"
+			)
+
 		try:
 			NetworkCard = subprocess.check_output(["ifconfig", "-a"])
-		except:
+		except Exception:
 			try:
 				NetworkCard = subprocess.check_output(["ip", "address", "show"])
 			except subprocess.CalledProcessError as ex:
 				NetworkCard = "Error fetching Network Interfaces:", ex
-				pass
 		try:
 			DNS = subprocess.check_output(["cat", "/etc/resolv.conf"])
 		except subprocess.CalledProcessError as ex:
 			DNS = "Error fetching DNS configuration:", ex
-			pass
 		try:
 			RoutingInfo = subprocess.check_output(["netstat", "-rn"])
-		except:
+		except Exception:
 			try:
 				RoutingInfo = subprocess.check_output(["ip", "route", "show"])
 			except subprocess.CalledProcessError as ex:
 				RoutingInfo = "Error fetching Routing information:", ex
-				pass
-
 		Message = "%s\nCurrent environment is:\nNetwork Config:\n%s\nDNS Settings:\n%s\nRouting info:\n%s\n\n"%(utils.HTTPCurrentDate(), NetworkCard.decode('latin-1'),DNS.decode('latin-1'),RoutingInfo.decode('latin-1'))
 		try:
 			utils.DumpConfig(self.ResponderConfigDump, Message)
 			utils.DumpConfig(self.ResponderConfigDump,str(self))
 		except AttributeError as ex:
 			print("Missing Module:", ex)
-			pass
 
 def init():
 	global Config

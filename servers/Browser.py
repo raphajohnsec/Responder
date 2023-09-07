@@ -62,7 +62,7 @@ def PrintServerName(data, entries):
 	for x in ServerName:
 		fingerprint = WorkstationFingerPrint(x[16:18])
 		name = x[:16].strip(b'\x00').decode('latin-1')
-		l.append('%s (%s)' % (name, fingerprint))
+		l.append(f'{name} ({fingerprint})')
 	return l
 
 
@@ -79,15 +79,23 @@ def ParsePacket(Payload):
 def RAPThisDomain(Client,Domain):		
 	PDC = RapFinger(Client,Domain,"\x00\x00\x00\x80")
 	if PDC is not None:
-		print(text("[LANMAN] Detected Domains: %s" % ', '.join(PDC)))
-	
+		print(text(f"[LANMAN] Detected Domains: {', '.join(PDC)}"))
+
 	SQL = RapFinger(Client,Domain,"\x04\x00\x00\x00")
 	if SQL is not None:
-		print(text("[LANMAN] Detected SQL Servers on domain %s: %s" % (Domain, ', '.join(SQL))))
+		print(
+			text(
+				f"[LANMAN] Detected SQL Servers on domain {Domain}: {', '.join(SQL)}"
+			)
+		)
 
 	WKST = RapFinger(Client,Domain,"\xff\xff\xff\xff")
 	if WKST is not None:
-		print(text("[LANMAN] Detected Workstations/Servers on domain %s: %s" % (Domain, ', '.join(WKST))))
+		print(
+			text(
+				f"[LANMAN] Detected Workstations/Servers on domain {Domain}: {', '.join(WKST)}"
+			)
+		)
 
 
 def RapFinger(Host, Domain, Type):
@@ -146,7 +154,7 @@ def RapFinger(Host, Domain, Type):
 					if data[8:10] == b'\x25\x00':
 						s.close()
 						return ParsePacket(data)
-	except:
+	except Exception:
 		pass
 
 def BecomeBackup(data,Client):
@@ -157,17 +165,21 @@ def BecomeBackup(data,Client):
 
 		if ReqType == "Become Backup Browser":
 			ServerName = BrowserPacket[1:]
-			Domain     = Decode_Name(data[49:81])
-			Name       = Decode_Name(data[15:47])
-			Role       = NBT_NS_Role(data[45:48])
-
 			if settings.Config.AnalyzeMode:
-				print(text("[Analyze mode: Browser] Datagram Request from IP: %s hostname: %s via the: %s wants to become a Local Master Browser Backup on this domain: %s."%(Client.replace("::ffff:",""), Name,Role,Domain)))
+				Domain     = Decode_Name(data[49:81])
+				Name       = Decode_Name(data[15:47])
+				Role       = NBT_NS_Role(data[45:48])
+
+				print(
+					text(
+						f'[Analyze mode: Browser] Datagram Request from IP: {Client.replace("::ffff:", "")} hostname: {Name} via the: {Role} wants to become a Local Master Browser Backup on this domain: {Domain}.'
+					)
+				)
 				RAPInfo = RAPThisDomain(Client, Domain)
 				if RAPInfo is not None:
 					print(RAPInfo)
 
-	except:
+	except Exception:
 		pass
 
 def ParseDatagramNBTNames(data,Client):
@@ -177,13 +189,17 @@ def ParseDatagramNBTNames(data,Client):
 		Role1  = NBT_NS_Role(data[45:48])
 		Role2  = NBT_NS_Role(data[79:82])
 
-	
+
 		if Role2 == "Domain Controller" or Role2 == "Browser Election" or Role2 == "Local Master Browser" and settings.Config.AnalyzeMode:
-			print(text('[Analyze mode: Browser] Datagram Request from IP: %s hostname: %s via the: %s to: %s. Service: %s' % (Client.replace("::ffff:",""), Name, Role1, Domain, Role2)))
+			print(
+				text(
+					f'[Analyze mode: Browser] Datagram Request from IP: {Client.replace("::ffff:", "")} hostname: {Name} via the: {Role1} to: {Domain}. Service: {Role2}'
+				)
+			)
 			RAPInfo = RAPThisDomain(Client, Domain)
 			if RAPInfo is not None:
 				print(RAPInfo)
-	except:
+	except Exception:
 		pass
 
 class Browser(BaseRequestHandler):

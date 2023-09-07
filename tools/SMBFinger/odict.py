@@ -52,10 +52,7 @@ class OrderedDict(dict, DictMixin):
     def popitem(self, last=True):
         if not self:
             raise KeyError('dictionary is empty')
-        if last:
-            key = next(reversed(self))
-        else:
-            key = next(iter(self))
+        key = next(reversed(self)) if last else next(iter(self))
         value = self.pop(key)
         return key, value
 
@@ -83,7 +80,7 @@ class OrderedDict(dict, DictMixin):
 
     def __repr__(self):
         if not self:
-            return '%s()' % (self.__class__.__name__,)
+            return f'{self.__class__.__name__}()'
         return '%s(%r)' % (self.__class__.__name__, list(self.items()))
 
     def copy(self):
@@ -108,4 +105,4 @@ class OrderedDict(dict, DictMixin):
 
 if __name__ == '__main__':
     d = OrderedDict([('foo',2),('bar',3),('baz',4),('zot',5),('arrgh',6)])
-    assert [x for x in d] == ['foo', 'bar', 'baz', 'zot', 'arrgh']
+    assert list(d) == ['foo', 'bar', 'baz', 'zot', 'arrgh']

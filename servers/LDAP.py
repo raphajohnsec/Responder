@@ -27,11 +27,11 @@ def CalculateDNSName(name):
 		name = name.decode('latin-1')
 	name = name.split(".")
 	DomainPrefix = struct.pack('B', len(name[0])).decode('latin-1')+name[0]
-	Dnslen = ''
-	for x in name:
-		if len(x) >=1:
-			Dnslen += struct.pack('B', len(x)).decode('latin-1')+x
-
+	Dnslen = ''.join(
+		struct.pack('B', len(x)).decode('latin-1') + x
+		for x in name
+		if len(x) >= 1
+	)
 	return Dnslen, DomainPrefix
 
 def ParseCLDAPNetlogon(data):
@@ -52,7 +52,7 @@ def ParseCLDAPNetlogon(data):
 			DomainGuidLen = struct.unpack(">B", Guid[1:2])[0]
 			DomainGuid = Guid[2:2+DomainGuidLen]
 		return DomainName, DomainGuid
-	except:
+	except Exception:
 		pass
 
 
@@ -97,7 +97,7 @@ def ParseLDAPHash(data,client, Challenge):  #Parse LDAP NTLMSSP v1/v2
 		UserLen      = struct.unpack('<H',SSPIString[38:40])[0]
 		UserOffset   = struct.unpack('<H',SSPIString[40:42])[0]
 		Username     = SSPIString[UserOffset:UserOffset+UserLen].decode('UTF-16LE')
-		WriteHash    = '%s::%s:%s:%s:%s' % (Username, Domain, LMHash, SMBHash, codecs.encode(Challenge,'hex').decode('latin-1'))
+		WriteHash = f"{Username}::{Domain}:{LMHash}:{SMBHash}:{codecs.encode(Challenge, 'hex').decode('latin-1')}"
 
 		SaveToDb({
 			'module': 'LDAP', 
@@ -117,7 +117,7 @@ def ParseLDAPHash(data,client, Challenge):  #Parse LDAP NTLMSSP v1/v2
 		UserLen      = struct.unpack('<H',SSPIString[38:40])[0]
 		UserOffset   = struct.unpack('<H',SSPIString[40:42])[0]
 		Username     = SSPIString[UserOffset:UserOffset+UserLen].decode('UTF-16LE')
-		WriteHash    = '%s::%s:%s:%s:%s' % (Username, Domain, codecs.encode(Challenge,'hex').decode('latin-1'), SMBHash[:32], SMBHash[32:])
+		WriteHash = f"{Username}::{Domain}:{codecs.encode(Challenge, 'hex').decode('latin-1')}:{SMBHash[:32]}:{SMBHash[32:]}"
 
 		SaveToDb({
 			'module': 'LDAP', 
@@ -155,22 +155,22 @@ def ParseCLDAPPacket(data, client, Challenge):
 			if AuthHeaderType == b'\x80':
 				PassLen   = struct.unpack('<b',data[20+UserDomainLen+1:20+UserDomainLen+2])[0]
 				Password  = data[20+UserDomainLen+2:20+UserDomainLen+2+PassLen].decode('latin-1')
-				SaveToDb({
-					'module': 'LDAP',
-					'type': 'Cleartext',
-					'client': client,
-					'user': UserDomain,
-					'cleartext': Password,
-					'fullhash': UserDomain+':'+Password,
-				})
-			
+				SaveToDb(
+					{
+						'module': 'LDAP',
+						'type': 'Cleartext',
+						'client': client,
+						'user': UserDomain,
+						'cleartext': Password,
+						'fullhash': f'{UserDomain}:{Password}',
+					}
+				)
+
 			if sasl == b'\xA3':
-				Buffer = ParseNTLM(data,client, Challenge)
-				return Buffer
-		
+				return ParseNTLM(data,client, Challenge)
 		elif Operation == b'\x63':
 			Buffer = ParseSearch(data)
-			print(text('[CLDAP] Sent CLDAP pong to %s.'% client.replace("::ffff:","")))
+			print(text(f'[CLDAP] Sent CLDAP pong to {client.replace("::ffff:", "")}.'))
 			return Buffer
 
 		elif settings.Config.Verbose:
@@ -183,14 +183,16 @@ def ParseCLDAPPacket(data, client, Challenge):
 		PassStr = data[12+UserLen+2:12+UserLen+3+PassLen].decode('latin-1')
 		if settings.Config.Verbose:
 			print(text('[CLDAP] Attempting to parse an old simple Bind request.'))
-		SaveToDb({
-			'module': 'LDAP',
-			'type': 'Cleartext',
-			'client': client,
-			'user': UserString,
-			'cleartext': PassStr,
-			'fullhash': UserString+':'+PassStr,
-			})
+		SaveToDb(
+			{
+				'module': 'LDAP',
+				'type': 'Cleartext',
+				'client': client,
+				'user': UserString,
+				'cleartext': PassStr,
+				'fullhash': f'{UserString}:{PassStr}',
+			}
+		)
 
 
 def ParseLDAPPacket(data, client, Challenge):
@@ -209,23 +211,21 @@ def ParseLDAPPacket(data, client, Challenge):
 			if AuthHeaderType == b'\x80':
 				PassLen   = struct.unpack('<b',data[20+UserDomainLen+1:20+UserDomainLen+2])[0]
 				Password  = data[20+UserDomainLen+2:20+UserDomainLen+2+PassLen].decode('latin-1')
-				SaveToDb({
-					'module': 'LDAP',
-					'type': 'Cleartext',
-					'client': client,
-					'user': UserDomain,
-					'cleartext': Password,
-					'fullhash': UserDomain+':'+Password,
-				})
-			
-			if sasl == b'\xA3':
-				Buffer = ParseNTLM(data,client, Challenge)
-				return Buffer
-		
-		elif Operation == b'\x63':
-			Buffer = ParseSearch(data)
-			return Buffer
+				SaveToDb(
+					{
+						'module': 'LDAP',
+						'type': 'Cleartext',
+						'client': client,
+						'user': UserDomain,
+						'cleartext': Password,
+						'fullhash': f'{UserDomain}:{Password}',
+					}
+				)
 
+			if sasl == b'\xA3':
+				return ParseNTLM(data,client, Challenge)
+		elif Operation == b'\x63':
+			return ParseSearch(data)
 		elif settings.Config.Verbose:
 			print(text('[LDAP] Operation not supported'))
 
@@ -236,14 +236,16 @@ def ParseLDAPPacket(data, client, Challenge):
 		PassStr = data[12+UserLen+2:12+UserLen+3+PassLen].decode('latin-1')
 		if settings.Config.Verbose:
 			print(text('[LDAP] Attempting to parse an old simple Bind request.'))
-		SaveToDb({
-			'module': 'LDAP',
-			'type': 'Cleartext',
-			'client': client,
-			'user': UserString,
-			'cleartext': PassStr,
-			'fullhash': UserString+':'+PassStr,
-			})
+		SaveToDb(
+			{
+				'module': 'LDAP',
+				'type': 'Cleartext',
+				'client': client,
+				'user': UserString,
+				'cleartext': PassStr,
+				'fullhash': f'{UserString}:{PassStr}',
+			}
+		)
 
 class LDAP(BaseRequestHandler):
 	def handle(self):
@@ -251,12 +253,11 @@ class LDAP(BaseRequestHandler):
 			self.request.settimeout(1)
 			data = self.request.recv(8092)
 			Challenge = RandomChallenge()
-			for x in range(5):
-				Buffer = ParseLDAPPacket(data,self.client_address[0], Challenge)
-				if Buffer:
+			for _ in range(5):
+				if Buffer := ParseLDAPPacket(data, self.client_address[0], Challenge):
 					self.request.send(NetworkSendBufferPython2or3(Buffer))
 				data = self.request.recv(8092)
-		except:
+		except Exception:
 			pass
 
 
@@ -265,11 +266,10 @@ class CLDAP(BaseRequestHandler):
 		try:
 			data, soc = self.request
 			Challenge = RandomChallenge()
-			for x in range(1):
-				Buffer = ParseCLDAPPacket(data,self.client_address[0], Challenge)
-				if Buffer:
+			for _ in range(1):
+				if Buffer := ParseCLDAPPacket(data, self.client_address[0], Challenge):
 					soc.sendto(NetworkSendBufferPython2or3(Buffer), self.client_address)
 				data, soc = self.request
-		except:
+		except Exception:
 			pass
 

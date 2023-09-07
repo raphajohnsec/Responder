@@ -26,26 +26,28 @@ class FTP(BaseRequestHandler):
 			self.request.send(NetworkSendBufferPython2or3(FTPPacket()))
 			data = self.request.recv(1024)
 
-			if data[0:4] == b'USER':
+			if data[:4] == b'USER':
 				User = data[5:].strip().decode("latin-1")
 
 				Packet = FTPPacket(Code="331",Message="User name okay, need password.")
 				self.request.send(NetworkSendBufferPython2or3(Packet))
 				data = self.request.recv(1024)
 
-			if data[0:4] == b'PASS':
+			if data[:4] == b'PASS':
 				Pass = data[5:].strip().decode("latin-1")
 				Packet = FTPPacket(Code="530",Message="User not logged in.")
 				self.request.send(NetworkSendBufferPython2or3(Packet))
 
-				SaveToDb({
-					'module': 'FTP', 
-					'type': 'Cleartext', 
-					'client': self.client_address[0], 
-					'user': User, 
-					'cleartext': Pass, 
-					'fullhash': User + ':' + Pass
-				})
+				SaveToDb(
+					{
+						'module': 'FTP',
+						'type': 'Cleartext',
+						'client': self.client_address[0],
+						'user': User,
+						'cleartext': Pass,
+						'fullhash': f'{User}:{Pass}',
+					}
+				)
 
 			else:
 				Packet = FTPPacket(Code="502",Message="Command not implemented.")
@@ -54,4 +56,3 @@ class FTP(BaseRequestHandler):
 
 		except Exception:
 			raise
-			pass

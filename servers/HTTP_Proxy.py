@@ -39,7 +39,7 @@ def InjectData(data, client, req_uri):
 	if len(data.split(b'\r\n\r\n')) > 1:
 		try:
 			Headers, Content = data.split(b'\r\n\r\n')
-		except:
+		except Exception:
 			return data
 
 		RedirectCodes = ['HTTP/1.1 300', 'HTTP/1.1 301', 'HTTP/1.1 302', 'HTTP/1.1 303', 'HTTP/1.1 304', 'HTTP/1.1 305', 'HTTP/1.1 306', 'HTTP/1.1 307']
@@ -60,7 +60,11 @@ def InjectData(data, client, req_uri):
 
 			if HasBody and len(settings.Config.HtmlToInject) > 2 and not req_uri.endswith('.js'):
 				if settings.Config.Verbose:
-					print(text("[PROXY] Injecting into HTTP Response: %s" % color(settings.Config.HtmlToInject, 3, 1)))
+					print(
+						text(
+							f"[PROXY] Injecting into HTTP Response: {color(settings.Config.HtmlToInject, 3, 1)}"
+						)
+					)
 
 				Content = Content.replace(HasBody[0], b'%s\n%s' % (HasBody[0], settings.Config.HtmlToInject.encode('latin-1')))
 
@@ -70,9 +74,8 @@ def InjectData(data, client, req_uri):
 		Headers = Headers.replace(b'Content-Length: '+Len, b'Content-Length: '+ NetworkSendBufferPython2or3(len(Content)))
 		data = Headers +b'\r\n\r\n'+ Content
 
-	else:
-		if settings.Config.Verbose:
-			print(text("[PROXY] Returning unmodified HTTP response"))
+	elif settings.Config.Verbose:
+		print(text("[PROXY] Returning unmodified HTTP response"))
 
 	return data
 
@@ -91,11 +94,11 @@ class ProxySock:
 		self.type = socket.type
 		self.proto = socket.proto
 
-	def connect(self, address) :
+	def connect(self, address):
 
 		# Store the real remote adress
 		self.host, self.port = address
-	   
+
 		# Try to connect to the proxy 
 		for (family, socktype, proto, canonname, sockaddr) in socket.getaddrinfo(
 			self.proxy_host, 
@@ -113,7 +116,7 @@ class ProxySock:
 			break
 		if not self.socket :
 			raise socket.error(msg)
-		
+
 		# Ask him to create a tunnel connection to the target host/port
 		self.socket.send(
 				("CONNECT %s:%d HTTP/1.1\r\n" + 
@@ -124,11 +127,10 @@ class ProxySock:
 
 		# Parse the response
 		parts = resp.split()
-		
+
 		# Not 200 ?
 		if parts[1] != "200":
-			print(color("[!] Error response from upstream proxy: %s" % resp, 1))
-			pass
+			print(color(f"[!] Error response from upstream proxy: {resp}", 1))
 
 	# Wrap all methods of inner socket, without any change
 	def accept(self) :
@@ -206,7 +208,11 @@ class HTTP_Proxy(BaseHTTPServer.BaseHTTPRequestHandler):
 	def handle(self):
 		(ip, port) =  self.client_address[0], self.client_address[1]
 		if settings.Config.Verbose:
-			print(text("[PROXY] Received connection from %s" % self.client_address[0].replace("::ffff:","")))
+			print(
+				text(
+					f'[PROXY] Received connection from {self.client_address[0].replace("::ffff:", "")}'
+				)
+			)
 		self.__base_handle()
 
 	def _connect_to(self, netloc, soc):
@@ -248,12 +254,10 @@ class HTTP_Proxy(BaseHTTPServer.BaseHTTPRequestHandler):
 				self.wfile.write(NetworkSendBufferPython2or3("\r\n"))
 				try:
 					self._read_write(soc, 300)
-				except:
+				except Exception:
 					pass
 		except:
 			raise
-			pass
-
 		finally:
 			soc.close()
 			self.connection.close()
@@ -266,7 +270,7 @@ class HTTP_Proxy(BaseHTTPServer.BaseHTTPRequestHandler):
 			return
 
 		if scm not in 'http' or fragment or not netloc:
-			self.send_error(400, "bad url %s" % self.path)
+			self.send_error(400, f"bad url {self.path}")
 			return
 
 		if settings.Config.Upstream_Proxy:
@@ -283,25 +287,29 @@ class HTTP_Proxy(BaseHTTPServer.BaseHTTPRequestHandler):
 				Cookie = self.headers['Cookie'] if "Cookie" in self.headers else ''
 
 				if settings.Config.Verbose:
-					print(text("[PROXY] Client        : %s" % color(self.client_address[0].replace("::ffff:",""), 3)))
-					print(text("[PROXY] Requested URL : %s" % color(self.path, 3)))
-					print(text("[PROXY] Cookie        : %s" % Cookie))
+					print(
+						text(
+							f'[PROXY] Client        : {color(self.client_address[0].replace("::ffff:", ""), 3)}'
+						)
+					)
+					print(text(f"[PROXY] Requested URL : {color(self.path, 3)}"))
+					print(text(f"[PROXY] Cookie        : {Cookie}"))
 
 				self.headers['Connection'] = 'close'
 				del self.headers['Proxy-Connection']
 				del self.headers['If-Range']
 				del self.headers['Range']
-				
+
 				for k, v in self.headers.items():
 					soc.send(NetworkSendBufferPython2or3("%s: %s\r\n" % (k.title(), v)))
 				soc.send(NetworkSendBufferPython2or3("\r\n"))
 
 				try:
 					self._read_write(soc, netloc)
-				except:
+				except Exception:
 					pass
 
-		except:
+		except Exception:
 			pass
 
 		finally:
@@ -325,7 +333,7 @@ class HTTP_Proxy(BaseHTTPServer.BaseHTTPRequestHandler):
 							data = i.recv(4096)
 							if len(data) > 1:
 								data = InjectData(data, self.client_address[0], self.path)
-						except:
+						except Exception:
 							pass
 					else:
 						out = soc
@@ -333,15 +341,15 @@ class HTTP_Proxy(BaseHTTPServer.BaseHTTPRequestHandler):
 							data = i.recv(4096)
 
 							if self.command == b'POST' and settings.Config.Verbose:
-								print(text("[PROXY] POST Data     : %s" % data))
-						except:
+								print(text(f"[PROXY] POST Data     : {data}"))
+						except Exception:
 							pass
 					if data:
 						try:
 							out.send(data)
 
 							count = 0
-						except:
+						except Exception:
 							pass
 			if count == max_idling:
 				break

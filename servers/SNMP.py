@@ -36,14 +36,16 @@ class SNMP(BaseRequestHandler):
             auth_params = hexlify(received_record_inner['field-4']._value).decode('utf-8')
 
 
-            SaveToDb({
-                "module": "SNMP",
-                "type": "SNMPv3",
-                "client" : self.client_address[0],
-                "user": snmp_user,
-                "hash": auth_params,
-                "fullhash": "{}:{}:{}:{}".format(snmp_user, full_snmp_msg, engine_id, auth_params)
-            })
+            SaveToDb(
+                {
+                    "module": "SNMP",
+                    "type": "SNMPv3",
+                    "client": self.client_address[0],
+                    "user": snmp_user,
+                    "hash": auth_params,
+                    "fullhash": f"{snmp_user}:{full_snmp_msg}:{engine_id}:{auth_params}",
+                }
+            )
         else:
             community_string = str(received_record['field-1'])
             snmp_version = '1' if snmp_version == 0 else '2c'
@@ -51,7 +53,7 @@ class SNMP(BaseRequestHandler):
             SaveToDb(
                 {
                     "module": "SNMP",
-                    "type": "Cleartext SNMPv{}".format(snmp_version),
+                    "type": f"Cleartext SNMPv{snmp_version}",
                     "client": self.client_address[0],
                     "user": community_string,
                     "cleartext": community_string,
