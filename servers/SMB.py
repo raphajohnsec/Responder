@@ -20,6 +20,7 @@ import struct
 from random import randrange
 from socketserver import BaseRequestHandler
 
+import settings
 from packets import (SMB2Header, SMB2NegoAns, SMB2Session1Data,
                      SMB2Session2Data, SMBHeader, SMBNegoAnsLM, SMBNegoKerbAns,
                      SMBSessEmpty, SMBSession1Data, SMBSession2Accept,
@@ -188,7 +189,16 @@ def IsNT4ClearTxt(data, client):
 
 
 class SMB1(BaseRequestHandler):  # SMB1 & SMB2 Server class, NTLMSSP
+    def __init__(self, *args):
+        self.clients = {}
+        super().__init__(*args)
+    def finish(self):
+        if settings.Config.Verbose:
+            if not self.clients[self.client_address]:
+                print(color(f"Client {self.client_address} had connected, but did not send an authentication, maybe ESS", 1))
     def handle(self):
+        # print(f"Received connection from {self.client_address}")
+        self.clients[self.client_address] = False
         try:
             self.ntry = 0
             while True:
@@ -207,8 +217,9 @@ class SMB1(BaseRequestHandler):  # SMB1 & SMB2 Server class, NTLMSSP
                     except Exception:
                         pass
 
-                                ##Negotiate proto answer SMBv2.
+                ## Negotiate proto answer SMBv2.
                 if data[8:10] == b"\x72\x00" and re.search(b"SMB 2.\?\?\?", data):
+                    # print("Sending Negotiate proto answer SMBv2")
                     head = SMB2Header(CreditCharge="\x00\x00",Credits="\x01\x00")
                     t = SMB2NegoAns()
                     t.calculate()
@@ -217,8 +228,9 @@ class SMB1(BaseRequestHandler):  # SMB1 & SMB2 Server class, NTLMSSP
                     self.request.send(NetworkSendBufferPython2or3(buffer1))
                     data = self.request.recv(1024)
 
-                                ## Nego answer SMBv2.
+                ## Nego answer SMBv2.
                 if data[16:18] == b"\x00\x00" and data[4:5] == b"\xfe":
+                    # print("Send Nego answer SMBv2")
                     head = SMB2Header(MessageId=GrabMessageID(data).decode('latin-1'), PID="\xff\xfe\x00\x00", CreditCharge=GrabCreditCharged(data).decode('latin-1'), Credits=GrabCreditRequested(data).decode('latin-1'))
                     t = SMB2NegoAns(Dialect="\x10\x02")
                     t.calculate()
@@ -226,8 +238,9 @@ class SMB1(BaseRequestHandler):  # SMB1 & SMB2 Server class, NTLMSSP
                     buffer1 = StructPython2or3('>i', str(packet1))+str(packet1)
                     self.request.send(NetworkSendBufferPython2or3(buffer1))
                     data = self.request.recv(1024)
-                                ## Session Setup 2 answer SMBv2.
+                ## Session Setup 2 answer SMBv2.
                 if data[16:18] == b"\x01\x00" and data[4:5] == b"\xfe":
+                    # print("Sending out SMB2 NTLMSSP NEGOTIATE")
                     head = SMB2Header(Cmd="\x01\x00", MessageId=GrabMessageID(data).decode('latin-1'), PID="\xff\xfe\x00\x00", CreditCharge=GrabCreditCharged(data).decode('latin-1'), Credits=GrabCreditRequested(data).decode('latin-1'), SessionID=GrabSessionID(data).decode('latin-1'),NTStatus="\x16\x00\x00\xc0")
                     t = SMB2Session1Data(NTLMSSPNtServerChallenge=NetworkRecvBufferPython2or3(Challenge))
                     t.calculate()
@@ -235,13 +248,15 @@ class SMB1(BaseRequestHandler):  # SMB1 & SMB2 Server class, NTLMSSP
                     buffer1 = StructPython2or3('>i', str(packet1))+str(packet1)
                     self.request.send(NetworkSendBufferPython2or3(buffer1))
                     data = self.request.recv(1024)
-                                ## Session Setup 3 answer SMBv2.
+                ##  Session Setup 3 answer SMBv2.
                 if (
                     data[16:18] == b'\x01\x00'
                     and GrabMessageID(data)[:1] == b'\x02'
                     or GrabMessageID(data)[:1] == b'\x03'
                     and data[4:5] == b'\xfe'
                 ):
+                    # print("Received hash - Send Session Setup 3 answer SMBv2")
+                    self.clients[self.client_address] = True
                     ParseSMBHash(data, self.client_address[0], Challenge)
                     head = SMB2Header(Cmd="\x01\x00", MessageId=GrabMessageID(data).decode('latin-1'), PID="\xff\xfe\x00\x00", CreditCharge=GrabCreditCharged(data).decode('latin-1'), Credits=GrabCreditRequested(data).decode('latin-1'), NTStatus="\x22\x00\x00\xc0", SessionID=GrabSessionID(data).decode('latin-1'))
                     t = SMB2Session2Data()
@@ -250,12 +265,13 @@ class SMB1(BaseRequestHandler):  # SMB1 & SMB2 Server class, NTLMSSP
                     self.request.send(NetworkSendBufferPython2or3(buffer1))
                     data = self.request.recv(1024)
 
-                                # Negotiate Protocol Response smbv1
+                # Negotiate Protocol Response smbv1
                 if (
                     data[8:10] == b'\x72\x00'
                     and data[4:5] == b'\xff'
                     and re.search(b'SMB 2.\?\?\?', data) is None
                 ):
+                    # print("Negotiate Protocol Response smbv1")
                     Header = SMBHeader(cmd="\x72",flag1="\x88", flag2="\x01\xc8", pid=pidcalc(NetworkRecvBufferPython2or3(data)),mid=midcalc(NetworkRecvBufferPython2or3(data)))
                     Body = SMBNegoKerbAns(Dialect=Parse_Nego_Dialect(NetworkRecvBufferPython2or3(data)))
                     Body.calculate()
@@ -283,6 +299,7 @@ class SMB1(BaseRequestHandler):  # SMB1 & SMB2 Server class, NTLMSSP
 
                 if data[8:10] == b"\x73\x00" and data[4:5] == b"\xff":  # STATUS_SUCCESS
                     if Is_Anonymous(data):
+                        print("Anonymous connection")
                         Header = SMBHeader(cmd="\x73",flag1="\x98", flag2="\x01\xc8",errorcode="\x72\x00\x00\xc0",pid=pidcalc(NetworkRecvBufferPython2or3(data)),tid="\x00\x00",uid=uidcalc(NetworkRecvBufferPython2or3(data)),mid=midcalc(NetworkRecvBufferPython2or3(data)))###should always send errorcode="\x72\x00\x00\xc0" account disabled for anonymous logins.
                         Body = SMBSessEmpty()
 
@@ -292,6 +309,8 @@ class SMB1(BaseRequestHandler):  # SMB1 & SMB2 Server class, NTLMSSP
                         self.request.send(NetworkSendBufferPython2or3(Buffer))
 
                     else:
+                        # print("Received hash")
+                        self.clients[self.client_address] = True
                         # Parse NTLMSSP_AUTH packet
                         ParseSMBHash(data,self.client_address[0], Challenge)
 
