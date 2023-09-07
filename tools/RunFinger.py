@@ -14,16 +14,19 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import re,sys,struct
 import datetime
-import multiprocessing
-import os
 import errno
+import multiprocessing
 import optparse
+import os
+import re
 import sqlite3
-from RunFingerPackets import *
-from odict import OrderedDict
+import struct
+import sys
 from socket import *
+
+from RunFingerPackets import *
+
 from odict import OrderedDict
 
 __version__ = "1.8"

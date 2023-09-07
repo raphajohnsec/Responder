@@ -14,10 +14,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from utils import *
 from socketserver import BaseRequestHandler
 
-from packets import POPOKPacket,POPNotOKPacket
+from packets import POPNotOKPacket, POPOKPacket
+from utils import *
+
 
 # POP3 Server class
 class POP3(BaseRequestHandler):

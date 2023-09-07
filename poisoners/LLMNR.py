@@ -15,11 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import contextlib
-from packets import LLMNR_Ans, LLMNR6_Ans
-from utils import *
-
-
 from socketserver import BaseRequestHandler
+
+from packets import LLMNR6_Ans, LLMNR_Ans
+from utils import *
 
 
 def Parse_LLMNR_Name(data):

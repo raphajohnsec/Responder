@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 
-import sys
 import argparse
 import getpass
 import re
 import socket
-from impacket.structure import Structure
-import ldap3
-import dns.resolver
+import sys
 from collections import defaultdict
+
+import dns.resolver
+import ldap3
+from impacket.structure import Structure
 
 
 class DNS_RECORD(Structure):

@@ -14,17 +14,20 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import sys
-import os
 import _thread
+import os
+import sys
 
 BASEDIR = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, BASEDIR)
 
-from servers.Browser import WorkstationFingerPrint, RequestType, RAPThisDomain, RapFinger
-from socketserver import UDPServer, ThreadingMixIn, BaseRequestHandler
+from socketserver import BaseRequestHandler, ThreadingMixIn, UDPServer
 from threading import Lock
+
+from servers.Browser import (RapFinger, RAPThisDomain, RequestType,
+                             WorkstationFingerPrint)
 from utils import *
+
 
 def ParseRoles(data):
     if len(data) != 4:

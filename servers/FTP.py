@@ -14,11 +14,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from utils import *
 from socketserver import BaseRequestHandler
 
-
 from packets import FTPPacket
+from utils import *
+
 
 class FTP(BaseRequestHandler):
     def handle(self):

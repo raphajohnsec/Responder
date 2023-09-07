@@ -14,18 +14,20 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import socket
-import struct
+import codecs
 import optparse
 import pipes
+import socket
+import struct
 import sys
-import codecs
 from socket import *
+
 sys.path.append('../')
-from odict import OrderedDict
 from random import randrange
-from time import sleep
 from subprocess import call
+from time import sleep
+
+from odict import OrderedDict
 
 if (sys.version_info < (3, 0)):
    sys.exit('This script is meant to be run with Python3')

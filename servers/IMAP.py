@@ -15,10 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import sys
+from socketserver import BaseRequestHandler
+
+from packets import IMAPCapability, IMAPCapabilityEnd, IMAPGreeting
 from utils import *
 
-from socketserver import BaseRequestHandler
-from packets import IMAPGreeting, IMAPCapability, IMAPCapabilityEnd
 
 class IMAP(BaseRequestHandler):
     def handle(self):

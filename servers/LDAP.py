@@ -14,13 +14,17 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import sys
-from socketserver import BaseRequestHandler
-from packets import LDAPSearchDefaultPacket, LDAPSearchSupportedCapabilitiesPacket, LDAPSearchSupportedMechanismsPacket, LDAPNTLMChallenge, CLDAPNetlogon
-from utils import *
-import struct
 import codecs
 import random
+import struct
+import sys
+from socketserver import BaseRequestHandler
+
+from packets import (CLDAPNetlogon, LDAPNTLMChallenge, LDAPSearchDefaultPacket,
+                     LDAPSearchSupportedCapabilitiesPacket,
+                     LDAPSearchSupportedMechanismsPacket)
+from utils import *
+
 
 def CalculateDNSName(name):
     if isinstance(name, bytes):

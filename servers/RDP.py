@@ -14,15 +14,14 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from utils import *
-import struct
+import codecs
 import re
 import ssl
-import codecs
+import struct
 from socketserver import BaseRequestHandler
 
-
 from packets import TPKT, X224, RDPNEGOAnswer, RDPNTLMChallengeAnswer
+from utils import *
 
 cert = os.path.join(settings.Config.ResponderPATH, settings.Config.SSLCert)
 key =  os.path.join(settings.Config.ResponderPATH, settings.Config.SSLKey)

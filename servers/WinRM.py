@@ -14,14 +14,16 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import struct
 import codecs
-from utils import *
-from socketserver import BaseRequestHandler, StreamRequestHandler
+import struct
 from base64 import b64decode, b64encode
-from packets import NTLM_Challenge
-from packets import IIS_Auth_401_Ans, IIS_Auth_Granted, IIS_NTLM_Challenge_Ans, IIS_Basic_401_Ans,WEBDAV_Options_Answer, WinRM_NTLM_Challenge_Ans
-from packets import WPADScript, ServeExeFile, ServeHtmlFile
+from socketserver import BaseRequestHandler, StreamRequestHandler
+
+from packets import (IIS_Auth_401_Ans, IIS_Auth_Granted, IIS_Basic_401_Ans,
+                     IIS_NTLM_Challenge_Ans, NTLM_Challenge, ServeExeFile,
+                     ServeHtmlFile, WEBDAV_Options_Answer,
+                     WinRM_NTLM_Challenge_Ans, WPADScript)
+from utils import *
 
 
 # Parse NTLMv1/v2 hash.

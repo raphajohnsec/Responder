@@ -14,11 +14,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from utils import *
 from socketserver import BaseRequestHandler, StreamRequestHandler
 
-from servers.HTTP import ParseHTTPHash
 from packets import *
+from servers.HTTP import ParseHTTPHash
+from utils import *
+
 
 def GrabUserAgent(data):
     if UserAgent := re.findall(r'(?<=User-Agent: )[^\r]*', data):
@@ -70,9 +71,10 @@ def PacketSequence(data, client, Challenge):
             #Buffer = IIS_Auth_Granted(Payload=settings.Config.HtmlToInject) #While at it, grab some SMB hashes...
             #Buffer.calculate()
             #Return a TCP RST, so the client uses direct connection and avoids disruption.
-            return RST
+            # TODO: RST was not defined in former code
+            return "RST"
         else:
-                       return IIS_Auth_Granted(Payload=settings.Config.HtmlToInject)# Didn't work? no worry, let's grab hashes via SMB...
+            return IIS_Auth_Granted(Payload=settings.Config.HtmlToInject)# Didn't work? no worry, let's grab hashes via SMB...
 
     elif Basic_Auth:
         GrabUserAgent(data)

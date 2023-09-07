@@ -15,15 +15,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import struct
-import settings
 import codecs
 import random
 import re
-from os import urandom
+import struct
 from base64 import b64decode, b64encode
+from os import urandom
+
+import settings
 from odict import OrderedDict
-from utils import HTTPCurrentDate, SMBTime, RespondWithIPAton, RespondWithIPPton, RespondWithIP, StructPython2or3, NetworkRecvBufferPython2or3, StructWithLenPython2or3
+from utils import (HTTPCurrentDate, NetworkRecvBufferPython2or3, RespondWithIP,
+                   RespondWithIPAton, RespondWithIPPton, SMBTime,
+                   StructPython2or3, StructWithLenPython2or3)
+
 
 # Packet class handling all packet generation (see odict.py).
 class Packet():

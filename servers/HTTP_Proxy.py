@@ -14,15 +14,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from utils import *
-import urllib.parse as urlparse
 import http.server as BaseHTTPServer
-
-
 import select
+import urllib.parse as urlparse
 import zlib
-from servers.HTTP import RespondWithFile
 
+from servers.HTTP import RespondWithFile
+from utils import *
 
 IgnoredDomains = [ 'crl.comodoca.com', 'crl.usertrust.com', 'ocsp.comodoca.com', 'ocsp.usertrust.com', 'www.download.windowsupdate.com', 'crl.microsoft.com' ]
 
@@ -80,7 +78,7 @@ def InjectData(data, client, req_uri):
     return data
 
 class ProxySock:
-    def __init__(self, socket, proxy_host, proxy_port) : 
+    def __init__(self, socket, proxy_host, proxy_port): 
 
         # First, use the socket, without any change
         self.socket = socket
@@ -133,59 +131,60 @@ class ProxySock:
             print(color(f"[!] Error response from upstream proxy: {resp}", 1))
 
     # Wrap all methods of inner socket, without any change
-    def accept(self) :
+    def accept(self):
         return self.socket.accept()
 
-    def bind(self, *args) :
+    def bind(self, *args):
         return self.socket.bind(*args)
     
-    def close(self) :
+    def close(self):
         return self.socket.close()
     
-    def fileno(self) :
+    def fileno(self):
         return self.socket.fileno()
 
-    def getsockname(self) :
+    def getsockname(self):
         return self.socket.getsockname()
     
-    def getsockopt(self, *args) :
+    def getsockopt(self, *args):
         return self.socket.getsockopt(*args)
     
-    def listen(self, *args) :
+    def listen(self, *args):
         return self.socket.listen(*args)
     
-    def makefile(self, *args) :
+    def makefile(self, *args):
         return self.socket.makefile(*args)
     
-    def recv(self, *args) :
+    def recv(self, *args):
         return self.socket.recv(*args)
     
-    def recvfrom(self, *args) :
+    def recvfrom(self, *args):
         return self.socket.recvfrom(*args)
 
-    def recvfrom_into(self, *args) :
+    def recvfrom_into(self, *args):
         return self.socket.recvfrom_into(*args)
     
-    def recv_into(self, *args) :
+    def recv_into(self, *args):
+        # TODO: buffer is not defined
         return self.socket.recv_into(buffer, *args)
     
-    def send(self, *args) :
+    def send(self, *args):
         try: return self.socket.send(*args)
         except: pass
     
-    def sendall(self, *args) :
+    def sendall(self, *args):
         return self.socket.sendall(*args)
     
-    def sendto(self, *args) :
+    def sendto(self, *args):
         return self.socket.sendto(*args)
     
-    def setblocking(self, *args) :
+    def setblocking(self, *args):
         return self.socket.setblocking(*args)
     
-    def settimeout(self, *args) :
+    def settimeout(self, *args):
         return self.socket.settimeout(*args)
     
-    def gettimeout(self) :
+    def gettimeout(self):
         return self.socket.gettimeout()
     
     def setsockopt(self, *args):
@@ -195,7 +194,7 @@ class ProxySock:
         return self.socket.shutdown(*args)
 
     # Return the (host, port) of the actual target, not the proxy gateway
-    def getpeername(self) :
+    def getpeername(self):
         return self.host, self.port
 
 # Inspired from Tiny HTTP proxy, original work: SUZUKI Hisao.

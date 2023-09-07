@@ -14,16 +14,15 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from utils import *
-import struct
+import codecs
 import re
 import ssl
-import codecs
-
+import struct
 from socketserver import BaseRequestHandler
 
-
-from packets import RPCMapBindAckAcceptedAns, RPCMapBindMapperAns, RPCHeader, NTLMChallenge, RPCNTLMNego
+from packets import (NTLMChallenge, RPCHeader, RPCMapBindAckAcceptedAns,
+                     RPCMapBindMapperAns, RPCNTLMNego)
+from utils import *
 
 NDR = "\x04\x5d\x88\x8a\xeb\x1c\xc9\x11\x9f\xe8\x08\x00\x2b\x10\x48\x60" #v2
 Map = "\x33\x05\x71\x71\xba\xbe\x37\x49\x83\x19\xb5\xdb\xef\x9c\xcc\x36" #v1
@@ -35,10 +34,6 @@ LSARPC   = "\x78\x57\x34\x12\x34\x12\xcd\xab\xef\x00\x01\x23\x45\x67\x89\xab" #v
 NETLOGON = "\x78\x56\x34\x12\x34\x12\xcd\xab\xef\x00\x01\x23\x45\x67\xcf\xfb" #v1
 WINSPOOL = "\x96\x3f\xf0\x76\xfd\xcd\xfc\x44\xa2\x2c\x64\x95\x0a\x00\x12\x09" #v1
 
-
-
-def Chose3264x(packet):
-    return Map32 if Map32 in packet else Map64
 
 def FindNTLMOpcode(data):
     SSPIStart  = data.find(b'NTLMSSP')

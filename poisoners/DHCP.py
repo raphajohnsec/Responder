@@ -15,22 +15,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import sys
+
 if (sys.version_info < (3, 0)):
    sys.exit('This script is meant to be run with Python3')
 
-import struct
-import random
-import optparse
-import configparser
-import os
-import codecs
-import netifaces
 import binascii
+import codecs
+import configparser
+import optparse
+import os
+import random
+import struct
+
+import netifaces
 
 BASEDIR = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, BASEDIR)
 from odict import OrderedDict
 from utils import *
+
 
 def color(txt, code = 1, modifier = 0):
     return "\033[%d;3%dm%s\033[0m" % (modifier, code, txt)

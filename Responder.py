@@ -17,13 +17,12 @@
 import contextlib
 import optparse
 import ssl
-try:
-    from SocketServer import TCPServer, UDPServer, ThreadingMixIn
-except Exception:
-    from socketserver import TCPServer, UDPServer, ThreadingMixIn
-from threading import Thread
-from utils import *
 import struct
+from socketserver import TCPServer, ThreadingMixIn, UDPServer
+from threading import Thread
+
+from utils import *
+
 banner()
 
 parser = optparse.OptionParser(usage='python %prog -I eth0 -w -d\nor:\npython %prog -I eth0 -wd', version=settings.__version__, prog=sys.argv[0])
@@ -218,8 +217,8 @@ def main():
 
         # Load (M)DNS, NBNS and LLMNR Poisoners
         from poisoners.LLMNR import LLMNR
-        from poisoners.NBTNS import NBTNS
         from poisoners.MDNS import MDNS
+        from poisoners.NBTNS import NBTNS
         threads = [
             Thread(
                 target=serve_LLMNR_poisoner,
@@ -398,7 +397,7 @@ def main():
             threads.append(Thread(target=serve_thread_tcp, args=(settings.Config.Bind_To, 110, POP3,)))
 
         if settings.Config.LDAP_On_Off:
-            from servers.LDAP import LDAP, CLDAP
+            from servers.LDAP import CLDAP, LDAP
             threads.extend(
                 (
                     Thread(

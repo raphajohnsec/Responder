@@ -14,10 +14,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from utils import *
-from packets import SMBHeader, SMBNegoData, SMBSessionData, SMBTreeConnectData, RAPNetServerEnum3Data, SMBTransRAPData
-from socketserver import BaseRequestHandler
 import struct
+from socketserver import BaseRequestHandler
+
+from packets import (RAPNetServerEnum3Data, SMBHeader, SMBNegoData,
+                     SMBSessionData, SMBTransRAPData, SMBTreeConnectData)
+from utils import *
 
 
 def WorkstationFingerPrint(data):

@@ -14,13 +14,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import codecs
 import random
 import struct
-import codecs
-from utils import *
 from socketserver import BaseRequestHandler
 
-from packets import MSSQLPreLoginAnswer, MSSQLNTLMChallengeAnswer
+from packets import MSSQLNTLMChallengeAnswer, MSSQLPreLoginAnswer
+from utils import *
 
 
 class TDS_Login_Packet:

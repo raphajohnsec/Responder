@@ -15,11 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from utils import settings, NetworkSendBufferPython2or3, SaveToDb
-
 from socketserver import BaseRequestHandler
 
 from packets import MQTTv3v4ResponsePacket, MQTTv5ResponsePacket
+from utils import NetworkSendBufferPython2or3, SaveToDb, settings
+
 
 #Read N byte integer
 def readInt(data, offset, numberOfBytes):

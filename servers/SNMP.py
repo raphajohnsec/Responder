@@ -14,11 +14,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from utils import *
 from binascii import hexlify
+from socketserver import BaseRequestHandler
+
 from pyasn1.codec.ber.decoder import decode
 
-from socketserver import BaseRequestHandler
+from utils import *
 
 
 class SNMP(BaseRequestHandler):

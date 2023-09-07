@@ -16,8 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import codecs
 import struct
-from utils import *
 from socketserver import BaseRequestHandler
+
+from utils import *
 
 
 def ParseMSKerbv5TCP(Data):

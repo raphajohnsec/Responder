@@ -14,9 +14,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from utils import *
-from packets import DNS_Ans, DNS_SRV_Ans, DNS6_Ans, DNS_AnsOPT
 from socketserver import BaseRequestHandler
+
+from packets import DNS6_Ans, DNS_Ans, DNS_AnsOPT, DNS_SRV_Ans, DNS6_AnsOPT
+from utils import *
+
 
 def ParseDNSType(data):
     QueryTypeClass = data[len(data)-4:]

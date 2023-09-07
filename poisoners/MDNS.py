@@ -17,8 +17,10 @@
 import struct
 import sys
 from socketserver import BaseRequestHandler
-from packets import MDNS_Ans, MDNS6_Ans
+
+from packets import MDNS6_Ans, MDNS_Ans
 from utils import *
+
 
 def Parse_MDNS_Name(data):
     try:

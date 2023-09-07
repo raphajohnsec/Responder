@@ -1,6 +1,9 @@
-import random, struct, sys
+import random
+import struct
+import sys
 from socket import *
 from time import sleep
+
 from odict import OrderedDict
 
 

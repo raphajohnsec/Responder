@@ -14,11 +14,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import utils, sys, random
 import configparser as ConfigParser
+import random
 import subprocess
+import sys
 
-from utils import *
+import utils
+from utils import logging, os, re, socket
 
 __version__ = 'Responder 3.1.3.0'
 

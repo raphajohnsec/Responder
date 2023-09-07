@@ -14,13 +14,17 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import struct, re
 import codecs
-from utils import *
+import re
+import struct
+from random import randrange
 from socketserver import BaseRequestHandler
 
-from random import randrange
-from packets import SMBHeader, SMBNegoAnsLM, SMBNegoKerbAns, SMBSession1Data, SMBSession2Accept, SMBSessEmpty, SMBTreeData, SMB2Header, SMB2NegoAns, SMB2Session1Data, SMB2Session2Data
+from packets import (SMB2Header, SMB2NegoAns, SMB2Session1Data,
+                     SMB2Session2Data, SMBHeader, SMBNegoAnsLM, SMBNegoKerbAns,
+                     SMBSessEmpty, SMBSession1Data, SMBSession2Accept,
+                     SMBTreeData)
+from utils import *
 
 
 def Is_Anonymous(data):  # Detect if SMB auth was Anonymous

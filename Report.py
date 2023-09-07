@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import sqlite3
 import os
+import settings
 
 def color(txt, code = 1, modifier = 0):
     if txt.startswith('[*]'):
