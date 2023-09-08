@@ -150,7 +150,7 @@ def serve_thread_udp_broadcast(host, port, handler):
         server = ThreadingUDPServer((host, port), handler)
         server.serve_forever()
     except Exception:
-        print(color("[!] ", 1, 1) + "Error starting UDP server on port " + str(port) + ", check permissions or other servers running.")
+        print(color("[!] ", 1, 1) + f"Error starting UDP server on {host}:{str(port)}, check permissions or other servers running.")
 
 def serve_NBTNS_poisoner(host, port, handler):
     serve_thread_udp_broadcast(host, port, handler)
@@ -160,30 +160,28 @@ def serve_MDNS_poisoner(host, port, handler):
         server = ThreadingUDPMDNSServer((host, port), handler)
         server.serve_forever()
     except Exception:
-        print(color("[!] ", 1, 1) + "Error starting UDP server on port " + str(port) + ", check permissions or other servers running.")
+        print(color("[!] ", 1, 1) + f"Error starting UDP server on {host}:{str(port)}, check permissions or other servers running.")
 
 def serve_LLMNR_poisoner(host, port, handler):
     try:
         server = ThreadingUDPLLMNRServer((host, port), handler)
         server.serve_forever()
     except Exception:
-        print(color("[!] ", 1, 1) + "Error starting UDP server on port " + str(port) + ", check permissions or other servers running.")
+        print(color("[!] ", 1, 1) + f"Error starting UDP server on {host}:{str(port)}, check permissions or other servers running.")
         
 def serve_thread_udp(host, port, handler):
     try:
         server = ThreadingUDPServer((host, port), handler)
         server.serve_forever()
     except Exception:
-        print(color("[!] ", 1, 1) + "Error starting UDP server on port " + str(port) + ", check permissions or other servers running.")
+        print(color("[!] ", 1, 1) + f"Error starting UDP server on {host}:{str(port)}, check permissions or other servers running.")
 
 def serve_thread_tcp(host, port, handler):
     try:
         server = ThreadingTCPServer((host, port), handler)
         server.serve_forever()
-    except Exception as e:
-        print(fr"{host}")
-        print(e)
-        print(color("[!] ", 1, 1) + f"Error starting TCP server on {host}:{str(port)} check permissions or other servers running.")
+    except Exception:
+        print(color("[!] ", 1, 1) + f"Error starting TCP server on {host}:{str(port)}, check permissions or other servers running.")
 
 def serve_thread_tcp_auth(host, port, handler):
     try:
@@ -205,7 +203,7 @@ def serve_thread_SSL(host, port, handler):
         server.socket = context.wrap_socket(server.socket, server_side=True)
         server.serve_forever()
     except Exception:
-        print(color("[!] ", 1, 1) + "Error starting SSL server on port " + str(port) + ", check permissions or other servers running.")
+        print(color("[!] ", 1, 1) + f"Error starting SSL server on {host}:{str(port)}, check permissions or other servers running.")
 
 
 def main():
