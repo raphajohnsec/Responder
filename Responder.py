@@ -237,14 +237,6 @@ def main():
                 ),
             ),
             Thread(
-                target=serve_MDNS_poisoner,
-                args=(
-                    '',
-                    5353,
-                    MDNS,
-                ),
-            ),
-            Thread(
                 target=serve_NBTNS_poisoner,
                 args=(
                     '',
@@ -253,6 +245,17 @@ def main():
                 ),
             ),
         ])
+        # MDNS Listener
+        if settings.Config.MDNS_On_Off:
+            threads.append(Thread(
+                target=serve_MDNS_poisoner,
+                args=(
+                    '',
+                    5353,
+                    MDNS,
+                ),
+            ))
+
         # Load Browser Listener
         from servers.Browser import Browser
         threads.append(Thread(target=serve_thread_udp_broadcast, args=('', 138,  Browser,)))

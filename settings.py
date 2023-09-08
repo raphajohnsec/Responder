@@ -111,6 +111,7 @@ class Settings:
         config.read(os.path.join(self.ResponderPATH, 'Responder.conf'))
 
         # Servers
+        self.MDNS_On_Off     = self.toBool(config.get('Responder Core', 'MDNS'))
         self.HTTP_On_Off     = self.toBool(config.get('Responder Core', 'HTTP'))
         self.SSL_On_Off      = self.toBool(config.get('Responder Core', 'HTTPS'))
         self.SMB_On_Off      = self.toBool(config.get('Responder Core', 'SMB'))
