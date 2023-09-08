@@ -51,30 +51,11 @@ SMB1 = "True"
 SMB2signing = "False"
 DB = f"{os.path.abspath(os.path.join(os.path.dirname(__file__)))}/RunFinger.db"
 
-class Packet():
-    fields = OrderedDict([
-    ])
-    def __init__(self, **kw):
-        self.fields = OrderedDict(self.__class__.fields)
-        for k,v in list(kw.items()):
-            self.fields[k] = v(self.fields[k]) if callable(v) else v
-    def __str__(self):
-        return "".join(map(str, list(self.fields.values())))
-
 if not os.path.exists(DB):
     cursor = sqlite3.connect(DB)
     cursor.execute('CREATE TABLE RunFinger (timestamp TEXT, Protocol TEXT, Host TEXT, WindowsVersion TEXT, OsVer TEXT, DomainJoined TEXT, Bootime TEXT, Signing TEXT, NullSess TEXT, IsRDPOn TEXT, SMB1 TEXT, MSSQL TEXT)')
     cursor.commit()
     cursor.close()
-
-def StructWithLenPython2or3(endian,data):
-    return struct.pack(endian, data).decode('latin-1')
-
-def NetworkSendBufferPython2or3(data):
-    return bytes(str(data), 'latin-1')
-
-def NetworkRecvBufferPython2or3(data):
-    return str(data.decode('latin-1'))
 
 def longueur(payload):
     return StructWithLenPython2or3(">i", len(''.join(payload)))
@@ -84,7 +65,7 @@ def ParseNegotiateSMB2Ans(data):
 
 def SMB2SigningMandatory(data):
     global SMB2signing
-    SMB2signing = "True" if data[70] == "\x03" else "False"
+    SMB2signing = "True" if data[70:71] == b"\x03" else "False"
 
 def WorkstationFingerPrint(data):
     return {
@@ -175,7 +156,7 @@ def IsDCVuln(t, host):
 #####################
 
 def IsSigningEnabled(data):
-    return 'True' if data[39] == "\x0f" else 'False'
+    return 'True' if data[39:40] == b"\x0f" else 'False'
 
 def atod(a):
     return struct.unpack("!L",inet_aton(a))[0]
@@ -333,14 +314,14 @@ def ConnectAndChoseSMB(host):
         pass
 
 def handle(data, host):
-    if data[28] == "\x00":
+    if data[28:29] == b"\x00":
         a =  SMBv2Head()
         a.calculate()
         b = SMBv2Negotiate()
         b.calculate()
         packet0 =str(a)+str(b)
         return longueur(packet0)+packet0
-    if data[28] == "\x01":
+    if data[28:29] == b"\x01":
         global Bootime
         SMB2SigningMandatory(data)
         Bootime = IsDCVuln(GetBootTime(data[116:124]), host[0])
@@ -350,7 +331,7 @@ def handle(data, host):
         b.calculate()
         packet0 =str(a)+str(b)
         return longueur(packet0)+packet0
-    if data[28] == "\x02":
+    if data[28:29] == b"\x02":
         ParseSMBNTLM2Exchange(data, host[0], Bootime, SMB2signing) 
 
 ##################

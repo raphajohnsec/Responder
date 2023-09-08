@@ -17,12 +17,10 @@
 import sys
 
 if (sys.version_info < (3, 0)):
-   sys.exit('This script is meant to be run with Python3')
+    sys.exit('This script is meant to be run with Python3')
 
 import binascii
-import codecs
 import configparser
-import optparse
 import os
 import random
 import struct
@@ -33,20 +31,6 @@ BASEDIR = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, BASEDIR)
 from odict import OrderedDict
 from utils import *
-
-
-def color(txt, code = 1, modifier = 0):
-    return "\033[%d;3%dm%s\033[0m" % (modifier, code, txt)
-
-
-def StructWithLenPython2or3(endian,data):
-    return struct.pack(endian, data).decode('latin-1')
-
-def NetworkSendBufferPython2or3(data):
-    return bytes(str(data), 'latin-1')
-
-def NetworkRecvBufferPython2or3(data):
-    return str(data.decode('latin-1'))
 
 class Packet():
     fields = OrderedDict([
@@ -204,16 +188,6 @@ class DHCPACK(Packet):
         
         self.fields["Op51Str"]  = StructWithLenPython2or3('>L', random.randrange(10, 20))
         self.fields["Op15Len"]  = StructWithLenPython2or3(">b",len(str(self.fields["Op15Str"])))
-
-def RespondToThisIP(ClientIp):
-    if ClientIp.startswith('127.0.0.'):
-        return False
-    elif RespondTo and ClientIp not in RespondTo:
-        return False
-    elif ClientIp in RespondTo or RespondTo == []:
-        if ClientIp not in DontRespondTo:
-            return True
-    return False
 
 def ParseSrcDSTAddr(data):
     SrcIP = socket.inet_ntoa(data[0][26:30])

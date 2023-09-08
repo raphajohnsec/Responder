@@ -65,7 +65,7 @@ def ParseSearch(data):
     if re.search(b'Netlogon', data):
         NbtName = settings.Config.MachineName
         TID = NetworkRecvBufferPython2or3(data[8:10])
-        if TID[1] == "\x63":
+        if TID[1:2] == b"\x63":
             TID = "\x00"+TID[0]
         DomainName, DomainGuid = ParseCLDAPNetlogon(data)
         DomainGuid = NetworkRecvBufferPython2or3(DomainGuid)
