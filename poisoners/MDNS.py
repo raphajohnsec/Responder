@@ -52,7 +52,7 @@ class MDNS(BaseRequestHandler):
             return None
 
         if settings.Config.AnalyzeMode:  # Analyze Mode
-            print(text('[Analyze mode: MDNS] Request by %-15s for %s, ignoring' % (color(self.client_address[0].replace("::ffff:",""), 3), color(Request_Name, 3))))
+            print(text('[Analyze mode: MDNS] Request by %-15s for %s, ignoring' % (color(self.client_address[0].replace("::ffff:",""), 3), color(repr(Request_Name), 3))))
             SavePoisonersToDb({
                         'Poisoner': 'MDNS', 
                         'SentToIp': self.client_address[0], 

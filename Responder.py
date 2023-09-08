@@ -65,6 +65,9 @@ settings.Config.ExpandIPRanges()
 #Create the DB, before we start Responder.
 CreateResponderDb()
 
+threadingthreads = set()
+threads = []
+
 class ThreadingUDPServer(ThreadingMixIn, UDPServer):
     def server_bind(self):
         if OsInterfaceIsSupported():
@@ -148,6 +151,7 @@ ThreadingTCPServerAuth.allow_reuse_address = 1
 def serve_thread_udp_broadcast(host, port, handler):
     try:
         server = ThreadingUDPServer((host, port), handler)
+        threadingthreads.add(server)
         server.serve_forever()
     except Exception:
         print(color("[!] ", 1, 1) + f"Error starting UDP server on {host}:{str(port)}, check permissions or other servers running.")
@@ -158,6 +162,7 @@ def serve_NBTNS_poisoner(host, port, handler):
 def serve_MDNS_poisoner(host, port, handler):
     try:
         server = ThreadingUDPMDNSServer((host, port), handler)
+        threadingthreads.add(server)
         server.serve_forever()
     except Exception:
         print(color("[!] ", 1, 1) + f"Error starting UDP server on {host}:{str(port)}, check permissions or other servers running.")
@@ -165,6 +170,7 @@ def serve_MDNS_poisoner(host, port, handler):
 def serve_LLMNR_poisoner(host, port, handler):
     try:
         server = ThreadingUDPLLMNRServer((host, port), handler)
+        threadingthreads.add(server)
         server.serve_forever()
     except Exception:
         print(color("[!] ", 1, 1) + f"Error starting UDP server on {host}:{str(port)}, check permissions or other servers running.")
@@ -172,6 +178,7 @@ def serve_LLMNR_poisoner(host, port, handler):
 def serve_thread_udp(host, port, handler):
     try:
         server = ThreadingUDPServer((host, port), handler)
+        threadingthreads.add(server)
         server.serve_forever()
     except Exception:
         print(color("[!] ", 1, 1) + f"Error starting UDP server on {host}:{str(port)}, check permissions or other servers running.")
@@ -179,6 +186,7 @@ def serve_thread_udp(host, port, handler):
 def serve_thread_tcp(host, port, handler):
     try:
         server = ThreadingTCPServer((host, port), handler)
+        threadingthreads.add(server)
         server.serve_forever()
     except Exception:
         print(color("[!] ", 1, 1) + f"Error starting TCP server on {host}:{str(port)}, check permissions or other servers running.")
@@ -186,6 +194,7 @@ def serve_thread_tcp(host, port, handler):
 def serve_thread_tcp_auth(host, port, handler):
     try:
         server = ThreadingTCPServerAuth((host, port), handler)
+        threadingthreads.add(server)
         server.serve_forever()
     except Exception:
         print(color("[!] ", 1, 1) + f"Error starting TCP server on {host}:{str(port)} check permissions or other servers running.")
@@ -201,6 +210,7 @@ def serve_thread_SSL(host, port, handler):
         else:
             server = ThreadingTCPServer((host, port), handler)
         server.socket = context.wrap_socket(server.socket, server_side=True)
+        threadingthreads.add(server)
         server.serve_forever()
     except Exception:
         print(color("[!] ", 1, 1) + f"Error starting SSL server on {host}:{str(port)}, check permissions or other servers running.")
@@ -217,7 +227,7 @@ def main():
         from poisoners.LLMNR import LLMNR
         from poisoners.MDNS import MDNS
         from poisoners.NBTNS import NBTNS
-        threads = [
+        threads.extend([
             Thread(
                 target=serve_LLMNR_poisoner,
                 args=(
@@ -242,7 +252,7 @@ def main():
                     NBTNS,
                 ),
             ),
-        ]
+        ])
         # Load Browser Listener
         from servers.Browser import Browser
         threads.append(Thread(target=serve_thread_udp_broadcast, args=('', 138,  Browser,)))
@@ -490,6 +500,11 @@ def main():
             time.sleep(1)
 
     except KeyboardInterrupt:
+        # print(threads)
+        # print(threadingthreads)
+        print("Trying to shutdown the threads")
+        for t in threads:
+            t.join(0.1)
         sys.exit("\r%s Exiting..." % color('[+]', 2, 1))
 
 if __name__ == '__main__':
