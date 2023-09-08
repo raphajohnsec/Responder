@@ -480,6 +480,7 @@ def StartupMessage():
 
     print(color("[+] ", 2, 1) + "Servers:")
     print('    %-27s' % "HTTP server" + (enabled if settings.Config.HTTP_On_Off else disabled))
+    print('    %-27s' % "MDNS server" + (enabled if settings.Config.MDNS_On_Off else disabled))
     print('    %-27s' % "HTTPS server" + (enabled if settings.Config.SSL_On_Off else disabled))
     print('    %-27s' % "WPAD proxy" + (enabled if settings.Config.WPAD_On_Off else disabled))
     print('    %-27s' % "Auth proxy" + (enabled if settings.Config.ProxyAuth_On_Off else disabled))
