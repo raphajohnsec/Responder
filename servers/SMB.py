@@ -195,7 +195,7 @@ class SMB1(BaseRequestHandler):  # SMB1 & SMB2 Server class, NTLMSSP
     def finish(self):
         if settings.Config.Verbose:
             if not self.clients[self.client_address]:
-                print(color(f"Client {self.client_address} had connected, but did not send an authentication, maybe ESS", 1))
+                print(color(f"[SMB1/2] Client {self.client_address} had connected, but did not send an authentication, maybe remove LM/ESS option", 1))
     def handle(self):
         # print(f"Received connection from {self.client_address}")
         self.clients[self.client_address] = False
@@ -354,7 +354,16 @@ class SMB1(BaseRequestHandler):  # SMB1 & SMB2 Server class, NTLMSSP
 
 
 class SMB1LM(BaseRequestHandler):  # SMB Server class, old version
+    def __init__(self, *args):
+        self.clients = {}
+        super().__init__(*args)
+    def finish(self):
+        if settings.Config.Verbose:
+            if not self.clients[self.client_address]:
+                print(color(f"[SMB1LM] Client {self.client_address} had connected, but did not send an authentication, maybe remove LM/ESS option", 1))
     def handle(self):
+        # print(f"Received connection from {self.client_address}")
+        self.clients[self.client_address] = False
         try:
             self.request.settimeout(1)
             data = self.request.recv(1024)
@@ -380,6 +389,7 @@ class SMB1LM(BaseRequestHandler):  # SMB Server class, old version
                     Buffer = StructPython2or3('>i', str(Packet))+str(Packet)
                     self.request.send(NetworkSendBufferPython2or3(Buffer))
                 else:
+                    self.clients[self.client_address] = True
                     ParseLMNTHash(data,self.client_address[0], Challenge)
                     head = SMBHeader(cmd="\x73",flag1="\x90", flag2="\x53\xc8",errorcode="\x22\x00\x00\xc0",pid=pidcalc(NetworkRecvBufferPython2or3(data)),tid=tidcalc(NetworkRecvBufferPython2or3(data)),uid=uidcalc(NetworkRecvBufferPython2or3(data)),mid=midcalc(NetworkRecvBufferPython2or3(data)))
                     Packet = str(head) + str(SMBSessEmpty())
