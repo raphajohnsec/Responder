@@ -156,6 +156,7 @@ class Settings:
         self.Upstream_Proxy     = options.Upstream_Proxy
         self.AnalyzeMode        = options.Analyze
         self.Verbose            = options.Verbose
+        self.unique_dedup       = options.unique_dedup
         self.ProxyAuth_On_Off   = options.ProxyAuth_On_Off
         self.CommandLine        = str(sys.argv)
         self.Bind_To            = utils.FindLocalIP(self.Interface, self.OURIP)

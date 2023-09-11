@@ -36,7 +36,9 @@ class NBTNS(BaseRequestHandler):
         if data[2:4] == b'\x01\x10':  # Analyze Mode
             if settings.Config.AnalyzeMode:
                 request_ident = f"{self.client_address[0]}{Name}"
-                if request_ident not in REQUESTS:
+                if settings.Config.unique_dedup and request_ident in REQUESTS:
+                    return
+                else:
                     REQUESTS.add(request_ident)
                     print(text('[Analyze mode: NBT-NS] Request by %-15s for %s, ignoring' % (color(self.client_address[0].replace("::ffff:",""), 3), color(Name, 3))))
                     SavePoisonersToDb({

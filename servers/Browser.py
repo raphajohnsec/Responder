@@ -189,22 +189,26 @@ def BecomeBackup(data,Client):
 
 def ParseDatagramNBTNames(data,Client):
     try:
-        Domain = Decode_Name(data[49:81])
-        Name   = Decode_Name(data[15:47])
-        Role1  = NBT_NS_Role(data[45:48])
-        Role2  = NBT_NS_Role(data[79:82])
-
         # TODO: Test if Role2 is not filtered
         # if Role2 == "Domain Controller" or Role2 == "Browser Election" or Role2 == "Local Master Browser" and settings.Config.AnalyzeMode:
         if settings.Config.AnalyzeMode:
+            Domain = Decode_Name(data[49:81])
+            Name   = Decode_Name(data[15:47])
+            Role1  = NBT_NS_Role(data[45:48])
+            Role2  = NBT_NS_Role(data[79:82])
+
+            
             request_ident = f"{Domain}{Name}{Role1}{Role2}"
-            if request_ident not in REQUESTS:
+            if settings.Config.unique_dedup and request_ident in REQUESTS:
+                return
+            else:
                 REQUESTS.add(request_ident)
                 print(
                     text(
                         f'[Analyze mode: Browser] Datagram Request from IP: {Client.replace("::ffff:", "")} hostname: {Name} via the: {Role1} to: {Domain}. Service: {Role2}'
                     )
                 )
+            
             RAPInfo = RAPThisDomain(Client, Domain)
             if RAPInfo is not None:
                 print(RAPInfo)

@@ -45,6 +45,7 @@ parser.add_option('-Q','--quiet',           action="store_true", help="Tell Resp
 parser.add_option('--lm',                  action="store_true", help="Force LM hashing downgrade for Windows XP/2003 and earlier. Default: False", dest="LM_On_Off", default=False)
 parser.add_option('--disable-ess',         action="store_true", help="Force ESS downgrade. Default: False", dest="NOESS_On_Off", default=False)
 parser.add_option('-v','--verbose',        action="store_true", help="Increase verbosity.", dest="Verbose")
+parser.add_option('-U','--unique',        action="store_true", help="Decrease output by only printing duplicate messages once", dest="unique_dedup")
 options, args = parser.parse_args()
 
 if os.geteuid() != 0:
