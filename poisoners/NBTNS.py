@@ -20,6 +20,7 @@ from socketserver import BaseRequestHandler
 from packets import NBT_Ans
 from utils import *
 
+REQUESTS = set()
 
 # NBT_NS Server class.
 class NBTNS(BaseRequestHandler):
@@ -34,13 +35,16 @@ class NBTNS(BaseRequestHandler):
 
         if data[2:4] == b'\x01\x10':  # Analyze Mode
             if settings.Config.AnalyzeMode:
-                print(text('[Analyze mode: NBT-NS] Request by %-15s for %s, ignoring' % (color(self.client_address[0].replace("::ffff:",""), 3), color(Name, 3))))
-                SavePoisonersToDb({
-                            'Poisoner': 'NBT-NS', 
-                            'SentToIp': self.client_address[0], 
-                            'ForName': Name,
-                            'AnalyzeMode': '1',
-                        })
+                request_ident = f"{self.client_address[0]}{Name}"
+                if request_ident not in REQUESTS:
+                    REQUESTS.add(request_ident)
+                    print(text('[Analyze mode: NBT-NS] Request by %-15s for %s, ignoring' % (color(self.client_address[0].replace("::ffff:",""), 3), color(Name, 3))))
+                    SavePoisonersToDb({
+                                'Poisoner': 'NBT-NS', 
+                                'SentToIp': self.client_address[0], 
+                                'ForName': Name,
+                                'AnalyzeMode': '1',
+                            })
             else:
                 Buffer1 = NBT_Ans()
                 Buffer1.calculate(data)

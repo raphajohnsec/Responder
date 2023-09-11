@@ -21,6 +21,7 @@ from packets import (RAPNetServerEnum3Data, SMBHeader, SMBNegoData,
                      SMBSessionData, SMBTransRAPData, SMBTreeConnectData)
 from utils import *
 
+REQUESTS = set()
 
 def WorkstationFingerPrint(data):
     return {
@@ -171,12 +172,14 @@ def BecomeBackup(data,Client):
                 Domain     = Decode_Name(data[49:81])
                 Name       = Decode_Name(data[15:47])
                 Role       = NBT_NS_Role(data[45:48])
-
-                print(
-                    text(
-                        f'[Analyze mode: Browser] Datagram Request from IP: {Client.replace("::ffff:", "")} hostname: {Name} via the: {Role} wants to become a Local Master Browser Backup on this domain: {Domain}.'
+                request_ident = f"{Domain}{Name}{Role}"
+                if request_ident not in REQUESTS:
+                    REQUESTS.add(request_ident)
+                    print(
+                        text(
+                            f'[Analyze mode: Browser] Datagram Request from IP: {Client.replace("::ffff:", "")} hostname: {Name} via the: {Role} wants to become a Local Master Browser Backup on this domain: {Domain}.'
+                        )
                     )
-                )
                 RAPInfo = RAPThisDomain(Client, Domain)
                 if RAPInfo is not None:
                     print(RAPInfo)
@@ -191,13 +194,17 @@ def ParseDatagramNBTNames(data,Client):
         Role1  = NBT_NS_Role(data[45:48])
         Role2  = NBT_NS_Role(data[79:82])
 
-
-        if Role2 == "Domain Controller" or Role2 == "Browser Election" or Role2 == "Local Master Browser" and settings.Config.AnalyzeMode:
-            print(
-                text(
-                    f'[Analyze mode: Browser] Datagram Request from IP: {Client.replace("::ffff:", "")} hostname: {Name} via the: {Role1} to: {Domain}. Service: {Role2}'
+        # TODO: Test if Role2 is not filtered
+        # if Role2 == "Domain Controller" or Role2 == "Browser Election" or Role2 == "Local Master Browser" and settings.Config.AnalyzeMode:
+        if settings.Config.AnalyzeMode:
+            request_ident = f"{Domain}{Name}{Role1}{Role2}"
+            if request_ident not in REQUESTS:
+                REQUESTS.add(request_ident)
+                print(
+                    text(
+                        f'[Analyze mode: Browser] Datagram Request from IP: {Client.replace("::ffff:", "")} hostname: {Name} via the: {Role1} to: {Domain}. Service: {Role2}'
+                    )
                 )
-            )
             RAPInfo = RAPThisDomain(Client, Domain)
             if RAPInfo is not None:
                 print(RAPInfo)
